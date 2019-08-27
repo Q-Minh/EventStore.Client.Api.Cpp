@@ -59,7 +59,6 @@ public:
 		using tcp_command = detail::tcp::tcp_command;
 		using tcp_flags = detail::tcp::tcp_flags;
 
-		// call user token with error message
 		if (connection_.expired()) return;
 
 		auto conn = connection_.lock();

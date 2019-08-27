@@ -9,6 +9,8 @@
 
 #include "logger.hpp"
 #include "connection_settings.hpp"
+#include "event_data.hpp"
+#include "append_to_stream.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
 #include "error/error.hpp"
@@ -38,10 +40,10 @@ int main(int argc, char** argv)
 		asio::io_context ioc;
 
 		asio::ip::tcp::endpoint endpoint;
-		endpoint.address(asio::ip::make_address_v4("127.0.0.1"));
-		endpoint.port(1113);
+		endpoint.address(asio::ip::make_address_v4(ep));
+		endpoint.port(port);
 		
-		es::user::user_credentials credentials("admin", "changeit");
+		es::user::user_credentials credentials(username, password);
 
 		auto connection_settings =
 			es::connection_settings_builder()
@@ -68,7 +70,7 @@ int main(int argc, char** argv)
 			);
 
 		tcp_connection->async_connect(
-			[self=tcp_connection](asio::error_code ec, es::detail::tcp::tcp_package_view view)
+			[tcp_connection=tcp_connection](asio::error_code ec, es::detail::tcp::tcp_package_view view)
 		{
 			if (!ec || ec == es::connection_errors::authentication_failed)
 			{
@@ -76,6 +78,30 @@ int main(int argc, char** argv)
 				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
 
 				ES_INFO("client has been identified, {}", ec.message());
+
+				std::vector<es::event_data> events;
+				auto guid = es::guid();
+				es::event_data event{ guid, "Test.Type", true, "{ \"test\": \"data\"}", "test metadata" };
+				events.push_back(event);
+				std::string stream_name = "test-stream";
+
+				es::async_append_stream(
+					*tcp_connection,
+					stream_name,
+					std::move(events),
+					[tcp_connection = tcp_connection, guid, stream_name](std::error_code ec, es::write_result result)
+				{
+					if (!ec)
+					{
+						ES_INFO("successfully appended to stream {}, next expected version={}", stream_name, result.next_expected_version());
+					}
+					else
+					{
+						ES_ERROR("error appending to stream : {}", ec.message());
+						return;
+					}
+				}
+				);
 			}
 			else
 			{

@@ -13,14 +13,15 @@
 #include <asio/streambuf.hpp>
 
 #include "logger.hpp"
+#include "guid.hpp"
 #include "connection_settings.hpp"
 #include "duration_conversions.hpp"
-#include "guid.hpp"
+#include "operations_manager.hpp"
 
 #include "tcp/tcp_package.hpp"
-#include "operations_manager.hpp"
 #include "tcp/read.hpp"
 #include "tcp/connect.hpp"
+#include "tcp/operation.hpp"
 
 namespace es {
 namespace connection {
@@ -40,9 +41,14 @@ public:
 	using executor_type = typename asio::ip::tcp::socket::executor_type;
 	using clock_type = typename WaitableTimer::clock_type;
 	using operation_type = OperationType;
+	using operations_manager_type = es::operations_manager<operation_type>;
 	using discovery_service_type = DiscoveryService;
 	using allocator_type = Allocator;
 	using dynamic_buffer_type = DynamicBuffer;
+	using waitable_timer_type = WaitableTimer;
+
+	// make type checks here for template arguments
+	// static_assert(... "...");
 
 	// make it so that every operation
 	// can access connection's members
@@ -87,7 +93,8 @@ public:
 	void async_send(detail::tcp::tcp_package<>&& package)
 	{
 		asio::post(
-			socket_.get_io_context(),
+			get_io_context(),
+			// use shared from this? it would extend the lifetime of the connection, even if client does not have any more references to it...
 			[this, package = std::move(package)]() mutable
 		{
 			bool write_in_progress = !this->message_queue_.empty();
@@ -98,6 +105,22 @@ public:
 			}
 		}
 		);
+	}
+
+	// send tcp package with notification
+	template <class PackageReceivedHandler>
+	void async_send(detail::tcp::tcp_package<>&& package, PackageReceivedHandler&& handler)
+	{
+		auto view = static_cast<detail::tcp::tcp_package_view>(package);
+		auto guid = es::guid(view.correlation_id().data());
+
+		// put package in message queue before initiating the operation (doesn't actually matter, just to give the timeout wait an extra nanosecond, haha)
+		this->async_send(std::move(package));
+
+		tcp::operations::operation_op<self_type, waitable_timer_type, PackageReceivedHandler>
+			op{ shared_from_this(), std::move(handler), std::move(guid) };
+
+		op.initiate();
 	}
 
 	// return socket
@@ -121,7 +144,7 @@ public:
 	}
 	
 private:
-	void handle_package(asio::error_code ec, detail::tcp::tcp_package_view view)
+	void on_package_received(asio::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		using tcp_command = detail::tcp::tcp_command;
 		using tcp_flags = detail::tcp::tcp_flags;
@@ -141,7 +164,7 @@ private:
 		switch (view.command())
 		{
 		case tcp_command::heartbeat_request_command:
-			ES_TRACE("basic_tcp_connection::handle_package : got heartbeat request, replying");
+			ES_TRACE("basic_tcp_connection::on_package_received : got heartbeat request, replying");
 			async_send(tcp_package(
 				tcp_command::heartbeat_response_command,
 				tcp_flags::none,
@@ -149,12 +172,15 @@ private:
 			));
 			break;
 		case tcp_command::heartbeat_response_command:
-			ES_TRACE("basic_tcp_connection::handle_package : got heartbeat response");
+			ES_TRACE("basic_tcp_connection::on_package_received : got heartbeat response");
 			break;
 		case tcp_command::bad_request:
-			ES_ERROR("basic_tcp_connection::handle_package : got bad request reply from server");
+			ES_ERROR("basic_tcp_connection::on_package_received : got bad request reply from server");
 			// do something
 			break;
+		default:
+			ES_WARN("basic_tcp_connection::on_package_received : received unexpected server response");
+			return;
 		}
 	}
 
@@ -178,7 +204,7 @@ private:
 					std::string_view(view.data() + view.message_offset(), view.message_size())
 				);
 
-				handle_package(ec, view);
+				on_package_received(ec, view);
 
 				this->async_start_receive();
 			}
@@ -222,8 +248,7 @@ private:
 	std::deque<detail::tcp::tcp_package<>> message_queue_;
 	unsigned int package_no_;
 
-	es::operations_manager<operation_type> operations_manager_;
-	//std::uint8_t buffer_[1 << 16];
+	operations_manager_type operations_manager_;
 	dynamic_buffer_type buffer_;
 };
 

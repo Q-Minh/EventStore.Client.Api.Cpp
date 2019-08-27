@@ -25,12 +25,16 @@ INTERFACE
 
     # headers
     # top-level
+	include/append_to_stream.hpp
     include/connection_settings.hpp
     include/duration_conversions.hpp
+	include/event_data.hpp
     include/guid.hpp
     include/logger.hpp
     include/operations_manager.hpp
+	include/position.hpp
     include/version.hpp
+	include/write_result.hpp
 
 	# buffer
 	include/buffer/basic_mutable_buffer_sequence.hpp
@@ -56,6 +60,7 @@ INTERFACE
     include/tcp/gossip_seed.hpp
     include/tcp/heartbeat.hpp
     include/tcp/identify.hpp
+	include/tcp/operation.hpp
     include/tcp/read.hpp
     include/tcp/tcp_commands.hpp
     include/tcp/tcp_flags.hpp
