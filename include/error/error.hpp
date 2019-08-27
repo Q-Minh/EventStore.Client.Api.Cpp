@@ -25,7 +25,8 @@ enum class connection_errors
 enum class communication_errors
 {
 	bad_length_prefix = 1,
-	unexpected_response = 2
+	unexpected_response = 2,
+	server_error = 3
 };
 
 enum class stream_errors
@@ -90,6 +91,8 @@ struct communication_category : public std::error_category
 			return "tcp length-prefixed frame had invalid message length";
 		case communication_errors::unexpected_response:
 			return "server response could not be understood";
+		case communication_errors::server_error:
+			return "error on server side";
 		default:
 			return "unknown error";
 		}

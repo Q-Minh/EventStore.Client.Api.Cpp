@@ -1,11 +1,16 @@
 #pragma once
 
+/*
+Add user credentials parameter to have authentication per request
+*/
+
 #ifndef ES_APPEND_TO_STREAM_HPP
 #define ES_APPEND_TO_STREAM_HPP
 
 #include <string>
 #include <iterator>
 #include <type_traits>
+#include <optional>
 
 #include "message/messages.pb.h"
 
@@ -30,8 +35,8 @@ void async_append_stream(
 )
 {
 	static_assert(
-		std::is_invocable_v<WriteResultHandler, std::error_code, write_result>,
-		"WriteResultHandler requirements not met, must have signature R(std::error_code, es::write_result)"
+		std::is_invocable_v<WriteResultHandler, std::error_code, std::optional<write_result>>,
+		"WriteResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::write_result>)"
 	);
 
 	message::WriteEvents message;
@@ -142,12 +147,12 @@ void async_append_stream(
 			if (response.has_prepare_position()) prepare_position = response.prepare_position();
 			if (response.has_commit_position()) commit_position = response.commit_position();
 
-			write_result result(
-				response.last_event_number(), 
-				// prepare position is put as argument to commit position, and vice versa, 
-				// is this expected behavior (see .NET client api)?
-				position{ prepare_position, commit_position }
-			);
+			auto result = std::make_optional(write_result{
+					response.last_event_number(), 
+					// prepare position is put as argument to commit position, and vice versa, 
+					// is this expected behavior (see .NET client api)?
+					position{ prepare_position, commit_position }
+				});
 
 			handler(ec, result);
 			return;

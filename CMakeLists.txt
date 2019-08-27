@@ -29,10 +29,14 @@ INTERFACE
     include/connection_settings.hpp
     include/duration_conversions.hpp
 	include/event_data.hpp
+	include/event_read_result.hpp
     include/guid.hpp
     include/logger.hpp
     include/operations_manager.hpp
 	include/position.hpp
+	include/read_stream_event.hpp
+	include/recorded_event.hpp
+	include/resolved_event.hpp
     include/version.hpp
 	include/write_result.hpp
 
@@ -105,7 +109,9 @@ function(build_executable executable entrypoint _sources)
     )
 endfunction()
 
-build_executable(connect-to-es-01 "examples/connect-to-es-01.cpp" "${_sources}")
+# build_executable(connect-to-es-01 "examples/connect-to-es-01.cpp" "${_sources}")
+build_executable(append-to-stream "examples/append_to_stream.cpp" "${_sources}")
+build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")
