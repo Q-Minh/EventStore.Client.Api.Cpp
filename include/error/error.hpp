@@ -1,0 +1,127 @@
+#pragma once
+
+#ifndef ES_ERROR_HPP
+#define ES_ERROR_HPP
+
+#include <system_error>
+
+namespace es {
+
+enum connection_errors
+{
+	// cannot start at 0, 0 is used as default success code in std
+	authentication_failed = 1,
+	identification_failed = 2,
+	operation_timeout = 3,
+	heartbeat_timeout = 4,
+	max_reconnections = 5,
+	max_operation_retries = 6,
+	endpoint_discovery = 7,
+	unexpected_response = 8,
+	connection_closed = 9,
+	authentication_timeout = 10
+};
+
+enum communication_errors
+{
+	bad_length_prefix = 1,
+};
+
+namespace error {
+
+struct connection_category : public std::error_category
+{
+	const char* name() const noexcept override
+	{
+		return "eventstore.connection";
+	}
+
+	std::string message(int e) const override
+	{
+		switch (static_cast<connection_errors>(e))
+		{
+		case connection_errors::authentication_failed:
+			return "failed to authenticate to server";
+		case connection_errors::identification_failed:
+			return "failed to identify to server";
+		case connection_errors::operation_timeout:
+			return "request timed out";
+		case connection_errors::heartbeat_timeout:
+			return "server failed to respond to heartbeat request";
+		case connection_errors::max_reconnections:
+			return "reached maximum number of reconnection attempts to server";
+		case connection_errors::max_operation_retries:
+			return "reached maximum number of retries for operation";
+		case connection_errors::endpoint_discovery:
+			return "failed to discover nodes";
+		case connection_errors::unexpected_response:
+			return "server response is not coherent with client request";
+		case connection_errors::connection_closed:
+			return "connection to server terminated";
+		case connection_errors::authentication_timeout:
+			return "authentication timed out";
+		default:
+			return "unknown error";
+		}
+	}
+};
+
+struct communication_category : public std::error_category
+{
+	const char* name() const noexcept override
+	{
+		return "eventstore.communication";
+	}
+
+	std::string message(int e) const override
+	{
+		switch (static_cast<communication_errors>(e))
+		{
+		case communication_errors::bad_length_prefix:
+			return "tcp length-prefixed frame had invalid message length";
+		default:
+			return "unknown error";
+		}
+	}
+};
+
+inline const connection_category& get_connection_category()
+{
+	static connection_category conn_category{};
+	return conn_category;
+}
+
+inline const communication_category& get_communication_category()
+{
+	static communication_category comm_category{};
+	return comm_category;
+}
+
+} // error
+
+inline std::error_code make_error_code(es::connection_errors ec) noexcept
+{
+	return std::error_code{ static_cast<int>(ec), es::error::get_connection_category() };
+}
+
+inline std::error_code make_error_code(es::communication_errors ec) noexcept
+{
+	return std::error_code{ static_cast<int>(ec), es::error::get_communication_category() };
+}
+
+static const std::error_category& connection_category = error::get_connection_category();
+static const std::error_category& communication_category = error::get_communication_category();
+
+} // es
+
+namespace std {
+
+template <>
+struct is_error_code_enum<es::connection_errors> : true_type {};
+
+template <>
+struct is_error_code_enum<es::communication_errors> : true_type {};
+
+} // std
+
+#endif // ES_ERROR_HPP
