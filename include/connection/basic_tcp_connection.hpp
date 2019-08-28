@@ -10,7 +10,7 @@
 #include <asio/ip/tcp.hpp>
 #include <asio/error_code.hpp>
 #include <asio/write.hpp>
-#include <asio/streambuf.hpp>
+#include <asio/buffer.hpp>
 
 #include "logger.hpp"
 #include "guid.hpp"

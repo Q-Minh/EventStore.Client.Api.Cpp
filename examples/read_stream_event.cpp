@@ -1,15 +1,9 @@
-#include <string>
 #include <mutex>
 #include <condition_variable>
 
-#include <asio/io_context.hpp>
 #include <asio/ip/basic_resolver.hpp>
-#include <asio/ip/tcp.hpp>
 #include <asio/ip/address.hpp>
-#include <asio/buffer.hpp>
 
-#include "logger.hpp"
-#include "connection_settings.hpp"
 #include "read_stream_event.hpp"
 
 #include "connection/basic_tcp_connection.hpp"

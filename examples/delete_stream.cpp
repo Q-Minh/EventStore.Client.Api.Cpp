@@ -1,16 +1,6 @@
-#include <string>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-
-#include <asio/io_context.hpp>
 #include <asio/ip/basic_resolver.hpp>
-#include <asio/ip/tcp.hpp>
 #include <asio/ip/address.hpp>
-#include <asio/buffer.hpp>
 
-#include "logger.hpp"
-#include "connection_settings.hpp"
 #include "delete_stream.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
@@ -81,7 +71,7 @@ int main(int argc, char** argv)
 
 	// wait for connection before sending operations
 	bool is_connected;
-	std::atomic<bool> notification;
+	bool notification;
 
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info

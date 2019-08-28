@@ -1,23 +1,14 @@
-#include <string>
 #include <mutex>
 #include <condition_variable>
 
-#include <asio/io_context.hpp>
 #include <asio/ip/basic_resolver.hpp>
-#include <asio/ip/tcp.hpp>
 #include <asio/ip/address.hpp>
-#include <asio/buffer.hpp>
 
-#include "logger.hpp"
-#include "connection_settings.hpp"
 #include "event_data.hpp"
 #include "append_to_stream.hpp"
-#include "read_stream_event.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
-#include "error/error.hpp"
 #include "tcp/discovery_service.hpp"
-#include "user/user_credentials.hpp"
 
 int main(int argc, char** argv)
 {
