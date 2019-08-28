@@ -93,18 +93,18 @@ where:
 
 ### Features
 
-- operations on streams (DONE)
-- operations on stream metadata (TODO)
-- unit tests (TODO)
-- benchmarks (TODO)
-- subscriptions (TODO)
+- operations on streams :heavy_check_mark:
+- operations on stream metadata
+- unit tests
+- benchmarks
+- subscriptions
 - transactions (IN PROGRESS)
-- connection configuration (reconnections, node preference, ssl, queue size, etc) (TODO)
-- user management (TODO)
-- cluster node discovery (TODO)
-- documentation (TODO)
-- more examples (TODO)
-- projections (TODO)
+- connection configuration (reconnections, node preference, ssl, queue size, etc)
+- user management
+- cluster node discovery
+- documentation
+- more examples
+- projections
 
 *Note* : Only TCP communication is considered for the time being. EventStore also offers an HTTP api.
 
