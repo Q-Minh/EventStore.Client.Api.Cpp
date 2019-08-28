@@ -36,9 +36,14 @@ INTERFACE
     include/logger.hpp
     include/operations_manager.hpp
 	include/position.hpp
+	include/read_direction.hpp
 	include/read_stream_event.hpp
+	include/read_stream_events.hpp
+	include/read_stream_events_backward.hpp
+	include/read_stream_events_forward.hpp
 	include/recorded_event.hpp
 	include/resolved_event.hpp
+	include/stream_events_slice.hpp
     include/version.hpp
 	include/write_result.hpp
 
@@ -115,6 +120,7 @@ endfunction()
 build_executable(append-to-stream "examples/append_to_stream.cpp" "${_sources}")
 build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}")
 build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")
+build_executable(read-stream-events "examples/read_stream_events.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")

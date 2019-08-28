@@ -70,8 +70,8 @@ int main(int argc, char** argv)
 			);
 
 	// wait for connection before sending operations
-	bool is_connected;
-	bool notification;
+	bool is_connected{ false };
+	bool notification{ false };
 
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info

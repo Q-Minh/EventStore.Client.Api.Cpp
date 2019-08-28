@@ -71,8 +71,8 @@ int main(int argc, char** argv)
 				asio::dynamic_buffer(buffer_storage)
 			);
 
-		bool is_connected;
-		bool notification;
+		bool is_connected{ false };
+		bool notification{ false };
 		std::mutex mutex;
 		std::condition_variable cv;
 

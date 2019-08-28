@@ -73,8 +73,8 @@ int main(int argc, char** argv)
 			);
 
 	// wait for connection before sending operations
-	bool is_connected;
-	bool notification;
+	bool is_connected{ false };
+	bool notification{ false };
 	std::mutex mutex;
 	std::condition_variable cv;
 

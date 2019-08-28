@@ -1,10 +1,8 @@
-#include <mutex>
-#include <condition_variable>
-
 #include <asio/ip/basic_resolver.hpp>
 #include <asio/ip/address.hpp>
 
-#include "read_stream_event.hpp"
+#include "read_stream_events_forward.hpp"
+#include "read_stream_events_backward.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
 #include "tcp/discovery_service.hpp"
@@ -13,11 +11,11 @@ int main(int argc, char** argv)
 {
 	GOOGLE_PROTOBUF_VERSION;
 
-	if (argc != 8)
+	if (argc != 10)
 	{
-		ES_ERROR("expected 7 arguments, got {}", argc - 1);
-		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> <event-number> [trace | debug | info | warn | error | critical | off]");
-		ES_ERROR("example: ./read-stream-event 127.0.0.1 1113 admin changeit test-stream 0 info");
+		ES_ERROR("expected 9 arguments, got {}", argc - 1);
+		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> <from-event-number> <max-number-of-events> [forward | backward] [trace | debug | info | warn | error | critical | off]");
+		ES_ERROR("example: ./read-stream-events 127.0.0.1 1113 admin changeit test-stream 0 10 info");
 		return 0;
 	}
 
@@ -27,8 +25,17 @@ int main(int argc, char** argv)
 	std::string username = argv[3];
 	std::string password = argv[4];
 	std::string stream = argv[5];
-	std::int64_t event_no = std::stoll(argv[6]);
-	std::string_view lvl = argv[7];
+	std::int64_t from_event_number = std::stoll(argv[6]);
+	int max_count = std::stoi(argv[7]);
+
+	std::string direction_str = argv[8];
+	if (direction_str != "forward" && direction_str != "backward")
+	{
+		ES_ERROR("read direction can only be backward or forward");
+		return 0;
+	}
+
+	std::string_view lvl = argv[9];
 	ES_DEFAULT_LOG_LEVEL(lvl);
 
 	asio::io_context ioc;
@@ -74,15 +81,12 @@ int main(int argc, char** argv)
 	// wait for connection before sending operations
 	bool is_connected{ false };
 	bool notification{ false };
-	std::mutex mutex;
-	std::condition_variable cv;
 
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info
 	tcp_connection->async_connect(
-		[tcp_connection = tcp_connection, &is_connected, &notification, &mutex, &cv](asio::error_code ec, es::detail::tcp::tcp_package_view view)
+		[tcp_connection = tcp_connection, &is_connected, &notification](asio::error_code ec, es::detail::tcp::tcp_package_view view)
 	{
-		std::lock_guard<std::mutex> lock(mutex);
 		notification = true;
 
 		if (!ec || ec == es::connection_errors::authentication_failed)
@@ -98,67 +102,79 @@ int main(int argc, char** argv)
 			// es connection failed
 			ES_ERROR("client has failed to identify with server, {}", ec.message());
 		}
-
-		// notify one waiting thread that the connection operation has ended
-		cv.notify_one();
 	}
 	);
 
-	// run io_context in a single thread, it is safe to use io_context concurrently
-	std::thread message_pump{ [&ioc]() { ioc.run(); } };
-
-	// wait for server connection response
+	// run non-blocking loop until notification notifies us of the connection operation result
+	while (!notification)
 	{
-		std::unique_lock<std::mutex> lock(mutex);
-		cv.wait(lock, [&notification] { return notification; });
+		ioc.poll();
 	}
 
 	if (!is_connected)
 	{
+		ES_ERROR("failed to connect to EventStore");
 		return 0;
 	}
 
-	// read one stream event, the given completion handler will
-	// be called once a server response with respect to this 
-	// operation has been received or has timed out
-	bool resolve_links_tos = true;
-	es::async_read_stream_event(
-		*tcp_connection,
-		stream,
-		event_no,
-		resolve_links_tos,
-		[tcp_connection = tcp_connection, &stream, event_no = event_no](std::error_code ec, std::optional<es::event_read_result> result)
+	auto handler = [tcp_connection = tcp_connection, &stream](std::error_code ec, std::optional<es::stream_events_slice> result)
 	{
 		if (!ec)
 		{
-			auto read_result = result.value();
-			ES_INFO("read event {} from stream {}", read_result.event_number(), read_result.stream());
-
-			if (!read_result.event().has_value()) return;
-			auto event = read_result.event().value();
-
-			ES_INFO("stream-id={}\n\tresolved={}\n\tevent-number={}\n\tevent-id={}\n\tis-json={}\n\tevent-type={}\n\tcreated={}\n\tcreated_epoch={}\n\tmetadata={}\n\tdata={}",
-				event.event().stream_id(),
-				event.is_resolved(),
-				event.event().event_number(),
-				es::to_string(event.event().event_id()),
-				event.event().is_json(),
-				event.event().event_type(),
-				event.event().created(),
-				event.event().created_epoch(),
-				event.event().metadata(),
-				event.event().content()
+			auto value = result.value();
+			ES_INFO("stream={}, from-event-number={}, next-event-number={}, last-event-number={}, is-end-of-stream={}, read-direction={}",
+				value.stream(),
+				value.from_event_number(),
+				value.next_event_number(),
+				value.last_event_number(),
+				value.is_end_of_stream(),
+				value.stream_read_direction() == es::read_direction::forward ? "forward" : "backward"
 			);
+
+			for (auto const& event : value.events())
+			{
+				ES_INFO("event read\n\tis-resolved={}\n\tevent-id={}\n\tevent-no={}\n\tevent-type={}\n\tmetadata={}\n\tcontent={}",
+					event.is_resolved(),
+					es::to_string(event.event().event_id()),
+					event.event().event_number(),
+					event.event().event_type(),
+					event.event().metadata(),
+					event.event().content()
+				);
+			}
 		}
 		else
 		{
-			ES_ERROR("error trying to read event {} from stream {}, {}", event_no, stream, ec.message());
+			ES_ERROR("error trying to read stream events from stream {} : {}", stream, ec.message());
 			return;
 		}
-	}
-	);
+	};
 
-	message_pump.join();
+	// read stream events in one direction or the other
+	if (direction_str == "forward")
+	{
+		es::async_read_stream_events_forward(
+			*tcp_connection,
+			stream,
+			from_event_number,
+			max_count,
+			true,
+			std::move(handler)
+		);
+	}
+	else
+	{
+		es::async_read_stream_events_backward(
+			*tcp_connection,
+			stream,
+			from_event_number,
+			max_count,
+			true,
+			std::move(handler)
+		);
+	}
+
+	ioc.run();
 
 	return 0;
 }
