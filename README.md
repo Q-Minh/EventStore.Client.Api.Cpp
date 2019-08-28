@@ -49,7 +49,7 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>/scripts/buildsystems/vcpkg.cmake
 
 To build an example (or your executable), like the `append-to-stream` example, run (from ./build):
 ```
-# windows, see CMakeLists.txt file for build targets such as `append-to-stream`, `read-stream-event` and more to come
+# windows, see CMakeLists.txt file for build targets such as `append-to-stream`, `read-stream-event`, `delete-stream-event` and more to come
 cmake --build . --target append-to-stream --config Release # or Debug, RelWithDebInfo, MinSizeRel
 
 # linux
@@ -93,14 +93,18 @@ where:
 
 ### Features
 
-Library is far from complete, roadmap is approximately :
+Library is far from complete, roadmap is approximately, not necessarily in order :
 
 - operations on streams (in progress)
 - operations on stream metadata (TODO)
-- user management (TODO)
+- unit tests (TODO)
 - subscriptions (TODO)
 - transactions (TODO)
+- connection configuration (reconnections, node preference, ssl, queue size, etc) (TODO)
+- user management (TODO)
 - cluster node discovery (TODO)
+- documentation (TODO)
+- more examples (TODO)
 - projections (TODO)
 
 *Note* : Only TCP communication is considered for the time being. EventStore also offers an HTTP api.

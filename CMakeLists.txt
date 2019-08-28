@@ -27,6 +27,8 @@ INTERFACE
     # top-level
 	include/append_to_stream.hpp
     include/connection_settings.hpp
+	include/delete_stream.hpp
+	include/delete_stream_result.hpp
     include/duration_conversions.hpp
 	include/event_data.hpp
 	include/event_read_result.hpp
@@ -112,6 +114,7 @@ endfunction()
 # build_executable(connect-to-es-01 "examples/connect-to-es-01.cpp" "${_sources}")
 build_executable(append-to-stream "examples/append_to_stream.cpp" "${_sources}")
 build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}")
+build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")

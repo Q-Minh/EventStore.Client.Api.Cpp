@@ -134,8 +134,6 @@ int main(int argc, char** argv)
 	events.push_back(event);
 	std::string stream_name = "test-stream";
 
-	notification = false;
-
 	// append one stream event, the given completion handler will
 	// be called once a server response with respect to this 
 	// operation has been received or has timed out
@@ -143,7 +141,7 @@ int main(int argc, char** argv)
 		*tcp_connection,
 		stream_name,
 		std::move(events),
-		[tcp_connection = tcp_connection, guid, stream_name, &notification, &mutex, &cv](std::error_code ec, std::optional<es::write_result> result)
+		[tcp_connection = tcp_connection, guid, stream_name](std::error_code ec, std::optional<es::write_result> result)
 	{
 		if (!ec)
 		{

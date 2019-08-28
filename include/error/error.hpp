@@ -117,7 +117,7 @@ struct stream_category : public std::error_category
 		case stream_errors::stream_deleted:
 			return "stream has been deleted";
 		case stream_errors::wrong_expected_version:
-			return "wrong expected version, stream was updated before this operation";
+			return "wrong expected version, stream was updated before this operation or did not exist";
 		default:
 			return "unknown error";
 		}
