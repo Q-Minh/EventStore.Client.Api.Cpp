@@ -35,7 +35,8 @@ enum class stream_errors
 	stream_deleted = 2,
 	access_denied = 3,
 	invalid_transaction = 4,
-	stream_not_found = 5
+	stream_not_found = 5,
+	version_mismatch = 6
 };
 
 namespace error {
@@ -121,6 +122,8 @@ struct stream_category : public std::error_category
 			return "wrong expected version, stream was updated before this operation or did not exist";
 		case stream_errors::stream_not_found:
 			return "the stream was not found";
+		case stream_errors::version_mismatch:
+			return "the expected version does not match actual stream version";
 		default:
 			return "unknown error";
 		}

@@ -128,7 +128,7 @@ int main(int argc, char** argv)
 	// append one stream event, the given completion handler will
 	// be called once a server response with respect to this 
 	// operation has been received or has timed out
-	es::async_append_stream(
+	es::async_append_to_stream(
 		*tcp_connection,
 		stream_name,
 		std::move(events),

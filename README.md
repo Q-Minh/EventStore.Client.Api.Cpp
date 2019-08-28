@@ -93,14 +93,12 @@ where:
 
 ### Features
 
-Library is far from complete, roadmap is approximately, not necessarily in order :
-
-- operations on streams (in progress)
+- operations on streams (DONE)
 - operations on stream metadata (TODO)
 - unit tests (TODO)
 - benchmarks (TODO)
 - subscriptions (TODO)
-- transactions (TODO)
+- transactions (IN PROGRESS)
 - connection configuration (reconnections, node preference, ssl, queue size, etc) (TODO)
 - user management (TODO)
 - cluster node discovery (TODO)

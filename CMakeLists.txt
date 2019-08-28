@@ -27,6 +27,7 @@ INTERFACE
     # top-level
 	include/all_events_slice.hpp
 	include/append_to_stream.hpp
+	include/conditional_append_to_stream.hpp
     include/connection_settings.hpp
 	include/delete_stream.hpp
 	include/delete_stream_result.hpp

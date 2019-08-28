@@ -1,11 +1,11 @@
 #pragma once
 
+#ifndef ES_CONDITIONAL_APPEND_TO_STREAM_HPP
+#define ES_CONDITIONAL_APPEND_TO_STREAM_HPP
+
 /*
 Add user credentials parameter to have authentication per request
 */
-
-#ifndef ES_APPEND_TO_STREAM_HPP
-#define ES_APPEND_TO_STREAM_HPP
 
 #include <string>
 #include <optional>
@@ -23,25 +23,27 @@ Add user credentials parameter to have authentication per request
 
 namespace es {
 
+// in the .net client api, this version doesn't throw on wrong expected version or stream deleted, but
+// in this api, there are no thrown exceptions, so this is basically the same as the classic async_append_to_stream ...
 template <class ConnectionType, class NewEventSequence, class WriteResultHandler>
-void async_append_to_stream(
+void async_conditional_append_to_stream(
 	ConnectionType& connection,
 	std::string const& stream,
 	NewEventSequence&& events,
 	WriteResultHandler&& handler,
-	long expected_version = (long)expected_version::any
+	long expected_version
 )
 {
 	static_assert(
 		std::is_invocable_v<WriteResultHandler, std::error_code, std::optional<write_result>>,
 		"WriteResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::write_result>)"
-	);
+		);
 
 	message::WriteEvents message;
 	message.set_event_stream_id(stream);
 	message.set_expected_version(expected_version);
 	message.set_require_master(connection.settings().require_master());
-	
+
 	auto it = std::begin(events);
 	auto end = std::end(events);
 
@@ -91,7 +93,7 @@ void async_append_to_stream(
 			connection.settings().default_user_credentials().password(),
 			(std::byte*)serialized.data(),
 			serialized.size()
-		));
+			));
 	}
 
 	connection.async_send(
@@ -122,7 +124,10 @@ void async_append_to_stream(
 			// retry
 			return;
 		case message::OperationResult::WrongExpectedVersion:
-			ec = make_error_code(stream_errors::wrong_expected_version);
+			// this is the only difference with the basic "append_to_stream.hpp"
+			// we just implement the conditional version to keep somewhat the same
+			// interface as the .net client api
+			ec = make_error_code(stream_errors::version_mismatch);
 			break;
 		case message::OperationResult::StreamDeleted:
 			ec = make_error_code(stream_errors::stream_deleted);
@@ -146,7 +151,7 @@ void async_append_to_stream(
 			if (response.has_commit_position()) commit_position = response.commit_position();
 
 			auto result = std::make_optional(write_result{
-					response.last_event_number(), 
+					response.last_event_number(),
 					// prepare position is put as argument to commit position, and vice versa, 
 					// is this expected behavior (see .NET client api)?
 					position{ prepare_position, commit_position }
@@ -167,4 +172,4 @@ void async_append_to_stream(
 
 }
 
-#endif // ES_APPEND_TO_STREAM_HPP
+#endif // ES_CONDITIONAL_APPEND_TO_STREAM_HPP
