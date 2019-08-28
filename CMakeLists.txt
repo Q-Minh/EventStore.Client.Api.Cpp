@@ -27,6 +27,7 @@ INTERFACE
     # top-level
 	include/all_events_slice.hpp
 	include/append_to_stream.hpp
+	include/commit_transaction.hpp
 	include/conditional_append_to_stream.hpp
     include/connection_settings.hpp
 	include/delete_stream.hpp
@@ -48,7 +49,10 @@ INTERFACE
 	include/read_stream_events_forward.hpp
 	include/recorded_event.hpp
 	include/resolved_event.hpp
+	include/start_transaction.hpp
 	include/stream_events_slice.hpp
+	include/transaction.hpp
+	include/transactional_write.hpp
     include/version.hpp
 	include/write_result.hpp
 
@@ -127,6 +131,7 @@ build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}
 build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")
 build_executable(read-stream-events "examples/read_stream_events.cpp" "${_sources}")
 build_executable(read-all-events "examples/read_all_events.cpp" "${_sources}")
+build_executable(transaction "examples/transaction.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")

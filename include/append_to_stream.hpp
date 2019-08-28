@@ -17,8 +17,6 @@ Add user credentials parameter to have authentication per request
 #include "guid.hpp"
 #include "write_result.hpp"
 #include "error/error.hpp"
-#include "tcp/tcp_commands.hpp"
-#include "tcp/tcp_flags.hpp"
 #include "tcp/tcp_package.hpp"
 
 namespace es {
@@ -98,6 +96,11 @@ void async_append_to_stream(
 		std::move(package),
 		[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view)
 	{
+		if (!ec && view.command() != detail::tcp::tcp_command::write_events_completed)
+		{
+			ec = make_error_code(communication_errors::unexpected_response);
+		}
+
 		// if there was an error, report immediately
 		if (ec)
 		{
@@ -152,7 +155,7 @@ void async_append_to_stream(
 					position{ prepare_position, commit_position }
 				});
 
-			handler(ec, result);
+			handler(ec, std::move(result));
 			return;
 		}
 		else
