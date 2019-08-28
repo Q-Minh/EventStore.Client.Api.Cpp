@@ -25,6 +25,7 @@ INTERFACE
 
     # headers
     # top-level
+	include/all_events_slice.hpp
 	include/append_to_stream.hpp
     include/connection_settings.hpp
 	include/delete_stream.hpp
@@ -36,6 +37,9 @@ INTERFACE
     include/logger.hpp
     include/operations_manager.hpp
 	include/position.hpp
+	include/read_all_events.hpp
+	include/read_all_events_backward.hpp
+	include/read_all_events_forward.hpp
 	include/read_direction.hpp
 	include/read_stream_event.hpp
 	include/read_stream_events.hpp
@@ -121,6 +125,7 @@ build_executable(append-to-stream "examples/append_to_stream.cpp" "${_sources}")
 build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}")
 build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")
 build_executable(read-stream-events "examples/read_stream_events.cpp" "${_sources}")
+build_executable(read-all-events "examples/read_all_events.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")

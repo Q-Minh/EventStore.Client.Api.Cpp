@@ -1,8 +1,8 @@
 #include <asio/ip/basic_resolver.hpp>
 #include <asio/ip/address.hpp>
 
-#include "read_stream_events_forward.hpp"
-#include "read_stream_events_backward.hpp"
+#include "read_all_events_forward.hpp"
+#include "read_all_events_backward.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
 #include "tcp/discovery_service.hpp"
@@ -14,8 +14,8 @@ int main(int argc, char** argv)
 	if (argc != 10)
 	{
 		ES_ERROR("expected 9 arguments, got {}", argc - 1);
-		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> <from-event-number> <max-number-of-events> [forward | backward] [trace | debug | info | warn | error | critical | off]");
-		ES_ERROR("example: ./read-stream-events 127.0.0.1 1113 admin changeit test-stream 0 10 info");
+		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <from-commit-pos> <from-prepare-pos> <max-number-of-events> [forward | backward] [trace | debug | info | warn | error | critical | off]");
+		ES_ERROR("example: ./read-all-events 127.0.0.1 1113 admin changeit 0 0 10  forward info");
 		return 0;
 	}
 
@@ -24,8 +24,8 @@ int main(int argc, char** argv)
 	int port = std::stoi(argv[2]);
 	std::string username = argv[3];
 	std::string password = argv[4];
-	std::string stream = argv[5];
-	std::int64_t from_event_number = std::stoll(argv[6]);
+	std::int64_t commit_position = std::stoll(argv[5]);
+	std::int64_t prepare_position = std::stoll(argv[6]);
 	int max_count = std::stoi(argv[7]);
 
 	std::string direction_str = argv[8];
@@ -117,16 +117,16 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	auto handler = [tcp_connection = tcp_connection, &stream](std::error_code ec, std::optional<es::stream_events_slice> result)
+	auto handler = [tcp_connection = tcp_connection, &direction_str](std::error_code ec, std::optional<es::all_events_slice> result)
 	{
 		if (!ec)
 		{
-			auto value = result.value();
-			ES_INFO("stream={}, from-event-number={}, next-event-number={}, last-event-number={}, is-end-of-stream={}, read-direction={}",
-				value.stream(),
-				value.from_event_number(),
-				value.next_event_number(),
-				value.last_event_number(),
+			auto value = result.value(); 
+			ES_INFO("from-commit-position={}, from-prepare-position={}, next-commit-position={}, next-prepare-position={}, is-end-of-stream={}, read-direction={}",
+				value.from_position().commit_position(),
+				value.from_position().prepare_position(),
+				value.next_position().commit_position(),
+				value.next_position().prepare_position(),
 				value.is_end_of_stream(),
 				value.stream_read_direction() == es::read_direction::forward ? "forward" : "backward"
 			);
@@ -144,22 +144,22 @@ int main(int argc, char** argv)
 			}
 
 			ES_INFO("got {} events", value.events().size());
-			return;
 		}
 		else
 		{
-			ES_ERROR("error trying to read stream events from stream {} : {}", stream, ec.message());
+			ES_ERROR("error trying to read all events {} : {}", direction_str, ec.message());
 			return;
 		}
 	};
 
+	es::position from_position{ commit_position, prepare_position };
+
 	// read stream events in one direction or the other
 	if (direction_str == "forward")
 	{
-		es::async_read_stream_events_forward(
+		es::async_read_all_events_forward(
 			*tcp_connection,
-			stream,
-			from_event_number,
+			from_position,
 			max_count,
 			true,
 			std::move(handler)
@@ -167,10 +167,9 @@ int main(int argc, char** argv)
 	}
 	else
 	{
-		es::async_read_stream_events_backward(
+		es::async_read_all_events_backward(
 			*tcp_connection,
-			stream,
-			from_event_number,
+			from_position,
 			max_count,
 			true,
 			std::move(handler)
