@@ -97,6 +97,7 @@ class operations_manager
 {
 public:
 	using operation_type = Operation;
+	using key_type = es::guid_type;
 
 	explicit operations_manager(
 		Allocator const& alloc = Allocator(),

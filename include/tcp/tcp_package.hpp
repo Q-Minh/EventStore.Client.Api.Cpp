@@ -110,6 +110,8 @@ template <class Allocator = std::allocator<std::byte>>
 class tcp_package
 {
 public:
+	tcp_package() = default;
+
 	tcp_package(tcp_package&& other)
 		: package_(other.package_), length_(other.length_), alloc_(other.alloc_)
 	{
@@ -127,6 +129,8 @@ public:
 
 		// deallocating on a nullptr should be a noop
 		other.package_ = nullptr;
+
+		return *this;
 	}
 	tcp_package(tcp_package const& other)
 		: package_(nullptr), length_(other.length_), alloc_(other.alloc_)

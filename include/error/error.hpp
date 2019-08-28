@@ -7,7 +7,7 @@
 
 namespace es {
 
-enum connection_errors
+enum class connection_errors
 {
 	// cannot start at 0, 0 is used as default success code in std
 	authentication_failed = 1,
@@ -22,9 +22,21 @@ enum connection_errors
 	authentication_timeout = 10
 };
 
-enum communication_errors
+enum class communication_errors
 {
 	bad_length_prefix = 1,
+	unexpected_response = 2,
+	server_error = 3
+};
+
+enum class stream_errors
+{
+	wrong_expected_version = 1,
+	stream_deleted = 2,
+	access_denied = 3,
+	invalid_transaction = 4,
+	stream_not_found = 5,
+	version_mismatch = 6
 };
 
 namespace error {
@@ -79,6 +91,39 @@ struct communication_category : public std::error_category
 		{
 		case communication_errors::bad_length_prefix:
 			return "tcp length-prefixed frame had invalid message length";
+		case communication_errors::unexpected_response:
+			return "server response could not be understood";
+		case communication_errors::server_error:
+			return "error on server side";
+		default:
+			return "unknown error";
+		}
+	}
+};
+
+struct stream_category : public std::error_category
+{
+	const char* name() const noexcept override
+	{
+		return "eventstore.stream";
+	}
+
+	std::string message(int e) const override
+	{
+		switch (static_cast<stream_errors>(e))
+		{
+		case stream_errors::access_denied:
+			return "access denied for stream";
+		case stream_errors::invalid_transaction:
+			return "invalid transaction";
+		case stream_errors::stream_deleted:
+			return "stream has been deleted";
+		case stream_errors::wrong_expected_version:
+			return "wrong expected version, stream was updated before this operation or did not exist";
+		case stream_errors::stream_not_found:
+			return "the stream was not found";
+		case stream_errors::version_mismatch:
+			return "the expected version does not match actual stream version";
 		default:
 			return "unknown error";
 		}
@@ -97,6 +142,12 @@ inline const communication_category& get_communication_category()
 	return comm_category;
 }
 
+inline const stream_category& get_stream_category()
+{
+	static stream_category str_category{};
+	return str_category;
+}
+
 } // error
 
 inline std::error_code make_error_code(es::connection_errors ec) noexcept
@@ -109,8 +160,14 @@ inline std::error_code make_error_code(es::communication_errors ec) noexcept
 	return std::error_code{ static_cast<int>(ec), es::error::get_communication_category() };
 }
 
+inline std::error_code make_error_code(es::stream_errors ec) noexcept
+{
+	return std::error_code{ static_cast<int>(ec), es::error::get_stream_category() };
+}
+
 static const std::error_category& connection_category = error::get_connection_category();
 static const std::error_category& communication_category = error::get_communication_category();
+static const std::error_category& stream_category = error::get_stream_category();
 
 } // es
 
@@ -121,6 +178,9 @@ struct is_error_code_enum<es::connection_errors> : true_type {};
 
 template <>
 struct is_error_code_enum<es::communication_errors> : true_type {};
+
+template <>
+struct is_error_code_enum<es::stream_errors> : true_type {};
 
 } // std
 

@@ -34,7 +34,7 @@ You can use [vcpkg](https://github.com/microsoft/vcpkg) for dependency managemen
 ### Building
 
 There are currently no imported targets and no custom FindEventStoreClientApiCpp.cmake module.
-For an example on how to build the project, see how our [CMakeLists scripts](./CMakeLists.txt) builds the examples in the [examples subdirectory](./examples/).
+For an example on how to build the project, see how our [CMakeLists script](./CMakeLists.txt) builds the examples in the [examples subdirectory](./examples/).
 
 To generate the build system with cmake, run:
 ```
@@ -47,23 +47,64 @@ cmake .. -G "Visual Studio 15 2017 Win64" -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>
 cmake .. -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>/scripts/buildsystems/vcpkg.cmake -DCMAKE_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release # or Debug, RelWithDebInfo, MinSizeRel
 ```
 
-To build an example (or your executable), like the connect-to-es-01 example, run (from ./build):
+To build an example (or your executable), like the `append-to-stream` example, run (from ./build):
 ```
-# windows, see CMakeLists.txt file for build targets such as "connect-to-es-01"
-cmake --build . --target connect-to-es-01 --config Release # or Debug, RelWithDebInfo, MinSizeRel
+# windows, see CMakeLists.txt file for build targets such as `append-to-stream`, `read-stream-event`, `delete-stream-event` and more to come
+cmake --build . --target append-to-stream --config Release # or Debug, RelWithDebInfo, MinSizeRel
 
 # linux
-cmake --build . --target connect-to-es-01
+cmake --build . --target append-to-stream
 ```
+
+### Running the examples
+
+For usage information, execute the examples without arguments. For example, after building the `append-to-stream` examples, run:
+```
+# windows
+./append-to-stream.exe
+
+[2019-08-27 18:05:30.964] [stdout] [error] expected 5 arguments, got 0
+[2019-08-27 18:05:30.964] [stdout] [error] usage: <executable> <ip endpoint> <port> <username> <password> [trace | debug | info | warn | error | critical | off]
+[2019-08-27 18:33:20.657] [stdout] [error] example: ./append-to-stream 127.0.0.1 1113 admin changeit info
+[2019-08-27 18:05:30.964] [stdout] [error] tool will write the following data to event store
+[2019-08-27 18:05:30.964] [stdout] [error] stream=test-stream
+        event-type=Test.Type
+        is-json=true
+        data={ "test": "data"}
+        metadata=test metadata
+
+# linux
+$ ./append-to-stream
+$ [2019-08-27 18:05:30.964] [stdout] [error] expected 5 arguments, got 0
+$ [2019-08-27 18:05:30.964] [stdout] [error] usage: <executable> <ip endpoint> <port> <username> <password> [trace | debug | info | warn | error | critical | off]
+$ [2019-08-27 18:33:20.657] [stdout] [error] example: ./append-to-stream 127.0.0.1 1113 admin changeit info
+$ [2019-08-27 18:05:30.964] [stdout] [error] tool will write the following data to event store
+$ [2019-08-27 18:05:30.964] [stdout] [error] stream=test-stream
+$         event-type=Test.Type
+$         is-json=true
+$         data={ "test": "data"}
+$         metadata=test metadata
+```
+where: 
+- `endpoint` is the ipv4 address of the EventStore server
+- `port` is the EventStore server's TCP listening port
+- `username` and `password` should be valid credentials (use "admin" "changeit", EventStore creates that user by default)
+- `verbosity` level should be specified
+
 ### Features
 
-Library is far from complete, roadmap is approximately :
-
-- operations on streams
-- operations on stream metadata
-- user management
-- subscriptions
-- projections
+- operations on streams (DONE)
+- operations on stream metadata (TODO)
+- unit tests (TODO)
+- benchmarks (TODO)
+- subscriptions (TODO)
+- transactions (IN PROGRESS)
+- connection configuration (reconnections, node preference, ssl, queue size, etc) (TODO)
+- user management (TODO)
+- cluster node discovery (TODO)
+- documentation (TODO)
+- more examples (TODO)
+- projections (TODO)
 
 *Note* : Only TCP communication is considered for the time being. EventStore also offers an HTTP api.
 
@@ -73,5 +114,5 @@ Library is far from complete, roadmap is approximately :
 - [EventStore documentation](https://eventstore.org/docs/)
 - [EventStore .NET Client Api](https://github.com/EventStore/EventStore) (see ClientAPI and ClusterNode projects for debugging/development)
 - [protobuf for C++](https://developers.google.com/protocol-buffers/docs/cpptutorial)
-- [always need cppreference](https://en.cppreference.com/w/)
-- [always need stackoverflow](https://stackoverflow.com)
+- [cppreference](https://en.cppreference.com/w/)
+- [stackoverflow](https://stackoverflow.com)

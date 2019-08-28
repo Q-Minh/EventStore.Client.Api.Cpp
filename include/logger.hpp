@@ -227,6 +227,14 @@ private:
 #define ES_WARN(...) es::logger::get().warn(__VA_ARGS__)
 #define ES_ERROR(...) es::logger::get().error(__VA_ARGS__)
 #define ES_CRITICAL(...) es::logger::get().critical(__VA_ARGS__)
-#define ES_DEFAULT_LEVEL(level) es::logger::get().set_level(level)
+
+#define ES_TRACE_SYNC(...) es::logger::get().trace_sync(__VA_ARGS__)
+#define ES_DEBUG_SYNC(...) es::logger::get().debug_sync(__VA_ARGS__)
+#define ES_INFO_SYNC(...) es::logger::get().info_sync(__VA_ARGS__)
+#define ES_WARN_SYNC(...) es::logger::get().warn_sync(__VA_ARGS__)
+#define ES_ERROR_SYNC(...) es::logger::get().error_sync(__VA_ARGS__)
+#define ES_CRITICAL_SYNC(...) es::logger::get().critical_sync(__VA_ARGS__)
+
+#define ES_DEFAULT_LOG_LEVEL(level) es::logger::get().set_level(level)
 
 #endif // LOGGER_HPP
