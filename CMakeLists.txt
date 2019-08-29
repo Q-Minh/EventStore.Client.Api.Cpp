@@ -29,6 +29,7 @@ INTERFACE
 	include/append_to_stream.hpp
 	include/commit_transaction.hpp
 	include/conditional_append_to_stream.hpp
+	include/connection_result.hpp
     include/connection_settings.hpp
 	include/delete_stream.hpp
 	include/delete_stream_result.hpp
@@ -38,7 +39,7 @@ INTERFACE
 	include/get_stream_metadata.hpp
     include/guid.hpp
     include/logger.hpp
-    include/operations_manager.hpp
+    include/operations_map.hpp
 	include/position.hpp
 	include/read_all_events.hpp
 	include/read_all_events_backward.hpp
@@ -61,6 +62,7 @@ INTERFACE
 
 	# buffer
 	include/buffer/basic_mutable_buffer_sequence.hpp
+	include/buffer/buffer_queue.hpp
 
     # connection
     include/connection/authentication_info.hpp
@@ -151,9 +153,10 @@ PRIVATE
     ${_sources}
 
 	# unit tests
-	"tests/tcp/operations_manager.cpp"
+	"tests/tcp/operations_map.cpp"
 	"tests/tcp/read.cpp"
     "tests/tcp/tcp_package.cpp"
+	"tests/buffer/buffer_queue.cpp"
 
 	# headers
 	"tests/mock_async_read_stream.hpp"

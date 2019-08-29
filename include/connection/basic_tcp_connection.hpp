@@ -14,9 +14,10 @@
 
 #include "logger.hpp"
 #include "guid.hpp"
+#include "connection_result.hpp"
 #include "connection_settings.hpp"
 #include "duration_conversions.hpp"
-#include "operations_manager.hpp"
+#include "operations_map.hpp"
 
 #include "tcp/tcp_package.hpp"
 #include "tcp/read.hpp"
@@ -41,7 +42,7 @@ public:
 	using executor_type = typename asio::ip::tcp::socket::executor_type;
 	using clock_type = typename WaitableTimer::clock_type;
 	using operation_type = OperationType;
-	using operations_manager_type = es::operations_manager<operation_type>;
+	using operations_map_type = es::operations_map<operation_type>;
 	using discovery_service_type = DiscoveryService;
 	using allocator_type = Allocator;
 	using dynamic_buffer_type = DynamicBuffer;
@@ -56,8 +57,8 @@ public:
 	struct friend_base 
 	{
 		unsigned int get_package_number(self_type& connection) const { return connection.package_number(); }
-		es::operations_manager<operation_type>& get_operations_manager(self_type& connection) { return connection.operations_manager_; }
-		es::operations_manager<operation_type> const& get_operations_manager(self_type& connection) const { return connection.operations_manager_; }
+		es::operations_map<operation_type>& get_operations_map(self_type& connection) { return connection.operations_map_; }
+		es::operations_map<operation_type> const& get_operations_map(self_type& connection) const { return connection.operations_map_; }
 		void async_start_receive(self_type& connection) { connection.async_start_receive(); }
 	};
 	template <class Friend>
@@ -76,15 +77,37 @@ public:
 		start_(clock_type::now()),
 		message_queue_(),
 		package_no_(0),
-		operations_manager_(),
+		operations_map_(),
 		buffer_(std::move(buffer))
 	{}
 
-	template <class PackageReceivedHandler>
-	void async_connect(PackageReceivedHandler&& handler)
+	template <class ConnectionResultHandler>
+	void async_connect(ConnectionResultHandler&& handler)
 	{
-		tcp::operations::connect_op<self_type, discovery_service_type, PackageReceivedHandler>
-			op{ shared_from_this(), std::move(handler) };
+		static_assert(
+			std::is_invocable_v<ConnectionResultHandler, std::error_code, std::optional<connection_result>>,
+			"ConnectionResultHandler requirements not met, must have signature R(std::error_code, std::optional<connection_result>)"
+		);
+
+		auto identification_package_received_handler = 
+			[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
+		{
+			if (!ec || ec == es::connection_errors::authentication_failed)
+			{
+				// on success, command should be client identified
+				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
+				
+				handler(ec, std::make_optional(connection_result{ connection_id }));
+			}
+			else
+			{
+				// es connection failed
+				handler(ec, {});
+			}
+		};
+
+		tcp::operations::connect_op<self_type, discovery_service_type, std::decay_t<decltype(identification_package_received_handler)>>
+			op{ shared_from_this(), std::move(identification_package_received_handler) };
 
 		op.initiate();
 	}
@@ -154,10 +177,10 @@ private:
 		++package_no_;
 
 		auto corr_id = es::guid(view.correlation_id().data());
-		if (operations_manager_.contains(corr_id))
+		if (operations_map_.contains(corr_id))
 		{
-			operations_manager_[corr_id](ec, view);
-			operations_manager_.erase(corr_id);
+			operations_map_[corr_id](ec, view);
+			operations_map_.erase(corr_id);
 			return;
 		}
 
@@ -248,7 +271,7 @@ private:
 	std::deque<detail::tcp::tcp_package<>> message_queue_;
 	unsigned int package_no_;
 
-	operations_manager_type operations_manager_;
+	operations_map_type operations_map_;
 	dynamic_buffer_type buffer_;
 };
 

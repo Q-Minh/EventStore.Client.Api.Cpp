@@ -28,8 +28,8 @@ public:
 	using connection_type = ConnectionType;
 	using handler_type = PackageReceivedHandler;
 	using waitable_timer_type = WaitableTimer;
-	using operations_manager_type = typename connection_type::operations_manager_type;
-	using op_key_type = typename operations_manager_type::key_type;
+	using operations_map_type = typename connection_type::operations_map_type;
+	using op_key_type = typename operations_map_type::key_type;
 
 	explicit operation_op(
 		std::shared_ptr<connection_type> const& connection,
@@ -46,8 +46,8 @@ public:
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
 
-		operations_manager_type& op_manager_ = this->get_operations_manager(*conn);
-		op_manager_.register_op(
+		operations_map_type& op_map_ = this->get_operations_map(*conn);
+		op_map_.register_op(
 			key_,
 			[handler = std::move(handler_), deadline = deadline_](std::error_code ec, detail::tcp::tcp_package_view view)
 		{
@@ -71,7 +71,7 @@ public:
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
 
-		operations_manager_type& op_manager_ = this->get_operations_manager(*conn);
+		operations_map_type& op_map_ = this->get_operations_map(*conn);
 
 		// operation has timed out if timer completion has been called with success
 		if (!ec)
@@ -79,9 +79,9 @@ public:
 			ES_DEBUG("operation_op::operator() : operation {} timed out", es::to_string(key_));
 			// call user's handler with error code
 			ec = make_error_code(connection_errors::operation_timeout);
-			op_manager_[key_](ec, {});
+			op_map_[key_](ec, {});
 			// remove operation from operations manager unless retries
-			op_manager_.erase(key_);
+			op_map_.erase(key_);
 		}
 		// response has been received in time, do nothing
 		else if (ec == asio::error::operation_aborted)
@@ -93,10 +93,10 @@ public:
 		{
 			ES_ERROR("operation_op::operator() : operation {} failed, {}", es::to_string(key_), ec.message());
 			// perform cleanup
-			if (op_manager_.contains(key_))
+			if (op_map_.contains(key_))
 			{
-				op_manager_[key_](ec, {});
-				op_manager_.erase(key_);
+				op_map_[key_](ec, {});
+				op_map_.erase(key_);
 			}
 		}
 	}
