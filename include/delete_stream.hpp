@@ -11,8 +11,6 @@
 #include "delete_stream_result.hpp"
 #include "guid.hpp"
 #include "error/error.hpp"
-#include "tcp/tcp_commands.hpp"
-#include "tcp/tcp_flags.hpp"
 #include "tcp/tcp_package.hpp"
 
 namespace es {
@@ -69,6 +67,11 @@ void async_delete_stream(
 		std::move(package),
 		[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view)
 	{
+		if (!ec && view.command() != detail::tcp::tcp_command::delete_stream_completed)
+		{
+			ec = make_error_code(communication_errors::unexpected_response);
+		}
+
 		if (ec)
 		{
 			handler(ec, {});

@@ -36,7 +36,9 @@ enum class stream_errors
 	access_denied = 3,
 	invalid_transaction = 4,
 	stream_not_found = 5,
-	version_mismatch = 6
+	version_mismatch = 6,
+	transaction_committed = 7,
+	transaction_rolled_back = 8
 };
 
 namespace error {
@@ -124,6 +126,10 @@ struct stream_category : public std::error_category
 			return "the stream was not found";
 		case stream_errors::version_mismatch:
 			return "the expected version does not match actual stream version";
+		case stream_errors::transaction_committed:
+			return "the transaction was already committed";
+		case stream_errors::transaction_rolled_back:
+			return "the transaction was already rolled back";
 		default:
 			return "unknown error";
 		}

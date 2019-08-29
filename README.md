@@ -97,9 +97,9 @@ where:
 - operations on stream metadata
 - unit tests
 - benchmarks
-- subscriptions
-- transactions (IN PROGRESS)
-- connection configuration (reconnections, node preference, ssl, queue size, etc)
+- subscriptions (IN PROGRESS)
+- transactions :heavy_check_mark:
+- connection configuration (retries, node preference, ssl, queue size, etc)
 - user management
 - cluster node discovery
 - documentation

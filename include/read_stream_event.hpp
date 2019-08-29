@@ -9,8 +9,6 @@ Add user credentials parameter to have authentication per request
 
 #include "event_read_result.hpp"
 #include "error/error.hpp"
-#include "tcp/tcp_commands.hpp"
-#include "tcp/tcp_flags.hpp"
 #include "tcp/tcp_package.hpp"
 
 namespace es {
@@ -67,6 +65,11 @@ void async_read_stream_event(
 		std::move(package),
 		[handler = std::move(handler), stream = stream, event_number = event_number](std::error_code ec, detail::tcp::tcp_package_view view)
 	{
+		if (!ec && view.command() != detail::tcp::tcp_command::read_event_completed)
+		{
+			ec = make_error_code(communication_errors::unexpected_response);
+		}
+
 		if (ec)
 		{
 			handler(ec, {});

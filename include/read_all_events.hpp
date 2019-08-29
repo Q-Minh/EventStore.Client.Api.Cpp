@@ -5,8 +5,6 @@
 
 #include "all_events_slice.hpp"
 #include "error/error.hpp"
-#include "tcp/tcp_commands.hpp"
-#include "tcp/tcp_flags.hpp"
 #include "tcp/tcp_package.hpp"
 
 namespace es {
@@ -66,6 +64,20 @@ void async_read_all_events(
 		[handler = std::move(handler), direction = direction]
 	(std::error_code ec, detail::tcp::tcp_package_view view)
 	{
+		if (!ec)
+		{
+			if (direction == read_direction::backward &&
+				view.command() != detail::tcp::tcp_command::read_all_events_backward_completed)
+			{
+				ec = make_error_code(communication_errors::unexpected_response);
+			}
+			if (direction == read_direction::forward && 
+				view.command() != detail::tcp::tcp_command::read_all_events_forward_completed)
+			{
+				ec = make_error_code(communication_errors::unexpected_response);
+			}
+		}
+
 		if (ec)
 		{
 			handler(ec, {});
