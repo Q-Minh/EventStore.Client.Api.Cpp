@@ -112,7 +112,7 @@ int main(int argc, char** argv)
 	// be called once a server response with respect to this 
 	// operation has been received or has timed out
 	es::async_delete_stream(
-		*tcp_connection,
+		tcp_connection,
 		stream,
 		expected_version,
 		[tcp_connection = tcp_connection, &stream](std::error_code ec, std::optional<es::delete_stream_result> result)

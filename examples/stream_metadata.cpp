@@ -1,21 +1,25 @@
+#include <mutex>
+#include <condition_variable>
+
 #include <asio/ip/basic_resolver.hpp>
 #include <asio/ip/address.hpp>
 
-#include "read_stream_events_forward.hpp"
-#include "read_stream_events_backward.hpp"
-
 #include "connection/basic_tcp_connection.hpp"
+#include "expected_version.hpp"
+#include "get_stream_metadata.hpp"
+#include "set_stream_metadata.hpp"
 #include "tcp/discovery_service.hpp"
 
 int main(int argc, char** argv)
 {
 	GOOGLE_PROTOBUF_VERSION;
 
-	if (argc != 10)
+	if (argc != 6)
 	{
-		ES_ERROR("expected 9 arguments, got {}", argc - 1);
-		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> <from-event-number> <max-number-of-events> [forward | backward] [trace | debug | info | warn | error | critical | off]");
-		ES_ERROR("example: ./read-stream-events 127.0.0.1 1113 admin changeit test-stream 0 10 info");
+		ES_ERROR("expected 5 arguments, got {}", argc - 1);
+		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> [trace | debug | info | warn | error | critical | off]");
+		ES_ERROR("example: ./stream-metadata 127.0.0.1 1113 admin changeit info");
+		ES_ERROR("tool will write the following metadata to the stream 'test-stream' and fetch it back: {}", "{ \"key\": 1029014814 }");
 		return 0;
 	}
 
@@ -24,18 +28,7 @@ int main(int argc, char** argv)
 	int port = std::stoi(argv[2]);
 	std::string username = argv[3];
 	std::string password = argv[4];
-	std::string stream = argv[5];
-	std::int64_t from_event_number = std::stoll(argv[6]);
-	int max_count = std::stoi(argv[7]);
-
-	std::string direction_str = argv[8];
-	if (direction_str != "forward" && direction_str != "backward")
-	{
-		ES_ERROR("read direction can only be backward or forward");
-		return 0;
-	}
-
-	std::string_view lvl = argv[9];
+	std::string_view lvl = argv[5];
 	ES_DEFAULT_LOG_LEVEL(lvl);
 
 	asio::io_context ioc;
@@ -81,12 +74,15 @@ int main(int argc, char** argv)
 	// wait for connection before sending operations
 	bool is_connected{ false };
 	bool notification{ false };
+	std::mutex mutex;
+	std::condition_variable cv;
 
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info
 	tcp_connection->async_connect(
-		[tcp_connection = tcp_connection, &is_connected, &notification](asio::error_code ec, es::detail::tcp::tcp_package_view view)
+		[tcp_connection = tcp_connection, &is_connected, &notification, &mutex, &cv](asio::error_code ec, es::detail::tcp::tcp_package_view view)
 	{
+		std::lock_guard<std::mutex> lock(mutex);
 		notification = true;
 
 		if (!ec || ec == es::connection_errors::authentication_failed)
@@ -102,82 +98,79 @@ int main(int argc, char** argv)
 			// es connection failed
 			ES_ERROR("client has failed to identify with server, {}", ec.message());
 		}
+
+		// notify one waiting thread that the connection operation has ended
+		cv.notify_one();
 	}
 	);
 
-	// run non-blocking loop until notification notifies us of the connection operation result
-	while (!notification)
+	// run io_context in a single thread, it is safe to use io_context concurrently
+	std::thread message_pump{ [&ioc]() { ioc.run(); } };
+
+	// wait for server connection response
 	{
-		ioc.poll();
+		std::unique_lock<std::mutex> lock(mutex);
+		cv.wait(lock, [&notification] { return notification; });
 	}
 
 	if (!is_connected)
 	{
-		ES_ERROR("failed to connect to EventStore");
 		return 0;
 	}
 
-	auto handler = [tcp_connection = tcp_connection, &stream](std::error_code ec, std::optional<es::stream_events_slice> result)
+	std::string stream = "test-stream";
+	std::string metadata = "{ \"key\": 1029014814 }";
+
+	auto get_stream_metadata_handler = 
+		[&stream](std::error_code ec, std::optional<es::stream_metadata_result_raw> result)
 	{
 		if (!ec)
 		{
-			auto value = result.value();
-			ES_INFO("stream={}, from-event-number={}, next-event-number={}, last-event-number={}, is-end-of-stream={}, read-direction={}",
-				value.stream(),
-				value.from_event_number(),
-				value.next_event_number(),
-				value.last_event_number(),
-				value.is_end_of_stream(),
-				value.stream_read_direction() == es::read_direction::forward ? "forward" : "backward"
+			ES_INFO("fetched stream metata from stream={}", stream);
+			ES_INFO("is-stream-deleted={}, meta-stream-version={}, stream={}", 
+				result.value().is_stream_deleted(), 
+				result.value().meta_stream_version(), 
+				result.value().stream()
 			);
-
-			for (auto const& event : value.events())
-			{
-				ES_TRACE("event read\n\tis-resolved={}\n\tevent-id={}\n\tevent-no={}\n\tevent-type={}\n\tmetadata={}\n\tcontent={}",
-					event.is_resolved(),
-					es::to_string(event.event().value().event_id()),
-					event.event().value().event_number(),
-					event.event().value().event_type(),
-					event.event().value().metadata(),
-					event.event().value().content()
-				);
-			}
-
-			ES_INFO("got {} events", value.events().size());
+			ES_INFO("stream-metadata={}", result.value().stream_metadata());
 			return;
 		}
 		else
 		{
-			ES_ERROR("error trying to read stream events from stream {} : {}", stream, ec.message());
+			ES_ERROR("failed to fetch stream metadata from stream={}", stream);
 			return;
 		}
 	};
 
-	// read stream events in one direction or the other
-	if (direction_str == "forward")
+	auto set_stream_metadata_handler = 
+		[&stream, handler = std::move(get_stream_metadata_handler), connection=tcp_connection](std::error_code ec, std::optional<es::write_result> result)
 	{
-		es::async_read_stream_events_forward(
-			tcp_connection,
-			stream,
-			from_event_number,
-			max_count,
-			true,
-			std::move(handler)
-		);
-	}
-	else
-	{
-		es::async_read_stream_events_backward(
-			tcp_connection,
-			stream,
-			from_event_number,
-			max_count,
-			true,
-			std::move(handler)
-		);
-	}
+		if (!ec)
+		{
+			ES_INFO("wrote stream metadata, next-expected-version={}", result.value().next_expected_version());
+			es::async_get_stream_metadata(
+				connection,
+				stream,
+				std::move(handler)
+			);
+			return;
+		}
+		else
+		{
+			ES_ERROR("failed to set stream metadata for stream={}, {}", stream, ec.message());
+			return;
+		}
+	};
 
-	ioc.run();
+	es::async_set_stream_metadata(
+		tcp_connection,
+		stream,
+		(std::int64_t)es::expected_version::any,
+		metadata,
+		std::move(set_stream_metadata_handler)
+	);
+
+	message_pump.join();
 
 	return 0;
 }

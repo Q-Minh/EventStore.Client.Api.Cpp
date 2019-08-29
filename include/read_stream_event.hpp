@@ -7,6 +7,8 @@ Add user credentials parameter to have authentication per request
 #ifndef ES_READ_STREAM_EVENT_HPP
 #define ES_READ_STREAM_EVENT_HPP
 
+#include <memory>
+
 #include "event_read_result.hpp"
 #include "error/error.hpp"
 #include "tcp/tcp_package.hpp"
@@ -15,7 +17,7 @@ namespace es {
 
 template <class ConnectionType, class EventReadResultHandler>
 void async_read_stream_event(
-	ConnectionType& connection,
+	std::shared_ptr<ConnectionType> const& connection,
 	std::string const& stream,
 	std::int64_t event_number,
 	bool resolveLinkTos,
@@ -31,14 +33,14 @@ void async_read_stream_event(
 	request.set_event_stream_id(stream);
 	request.set_event_number(event_number);
 	request.set_resolve_link_tos(resolveLinkTos);
-	request.set_require_master(connection.settings().require_master());
+	request.set_require_master(connection->settings().require_master());
 
 	auto serialized = request.SerializeAsString();
 
 	auto corr_id = es::guid();
 	detail::tcp::tcp_package<> package;
 
-	if (connection.settings().default_user_credentials().null())
+	if (connection->settings().default_user_credentials().null())
 	{
 		package = std::move(detail::tcp::tcp_package<>(
 			detail::tcp::tcp_command::read_event,
@@ -54,14 +56,14 @@ void async_read_stream_event(
 			detail::tcp::tcp_command::read_event,
 			detail::tcp::tcp_flags::authenticated,
 			corr_id,
-			connection.settings().default_user_credentials().username(),
-			connection.settings().default_user_credentials().password(),
+			connection->settings().default_user_credentials().username(),
+			connection->settings().default_user_credentials().password(),
 			(std::byte*)serialized.data(),
 			serialized.size()
 			));
 	}
 
-	connection.async_send(
+	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler), stream = stream, event_number = event_number](std::error_code ec, detail::tcp::tcp_package_view view)
 	{

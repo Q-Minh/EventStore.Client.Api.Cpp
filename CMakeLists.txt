@@ -35,6 +35,7 @@ INTERFACE
     include/duration_conversions.hpp
 	include/event_data.hpp
 	include/event_read_result.hpp
+	include/get_stream_metadata.hpp
     include/guid.hpp
     include/logger.hpp
     include/operations_manager.hpp
@@ -49,8 +50,10 @@ INTERFACE
 	include/read_stream_events_forward.hpp
 	include/recorded_event.hpp
 	include/resolved_event.hpp
+	include/set_stream_metadata.hpp
 	include/start_transaction.hpp
 	include/stream_events_slice.hpp
+	include/stream_metadata_result_raw.hpp
 	include/transaction.hpp
 	include/transactional_write.hpp
     include/version.hpp
@@ -70,8 +73,14 @@ INTERFACE
     include/connection/node_preference.hpp
     include/connection/reconnection_info.hpp
 
-	#error
+	# error
 	include/error/error.hpp
+
+	# system
+	include/system/consumer_strategies.hpp
+	include/system/metadata.hpp
+	include/system/event_types.hpp
+	include/system/streams.hpp
 
     # tcp
 	include/tcp/authenticate.hpp
@@ -132,6 +141,7 @@ build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")
 build_executable(read-stream-events "examples/read_stream_events.cpp" "${_sources}")
 build_executable(read-all-events "examples/read_all_events.cpp" "${_sources}")
 build_executable(transaction "examples/transaction.cpp" "${_sources}")
+build_executable(stream-metadata "examples/stream_metadata.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")

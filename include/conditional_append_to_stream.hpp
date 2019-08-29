@@ -25,7 +25,7 @@ namespace es {
 // in this api, there are no thrown exceptions, so this is basically the same as the classic async_append_to_stream ...
 template <class ConnectionType, class NewEventSequence, class WriteResultHandler>
 void async_conditional_append_to_stream(
-	ConnectionType& connection,
+	std::shared_ptr<ConnectionType> const& connection,
 	std::string const& stream,
 	NewEventSequence&& events,
 	WriteResultHandler&& handler,
@@ -40,7 +40,7 @@ void async_conditional_append_to_stream(
 	message::WriteEvents message;
 	message.set_event_stream_id(stream);
 	message.set_expected_version(expected_version);
-	message.set_require_master(connection.settings().require_master());
+	message.set_require_master(connection->settings().require_master());
 
 	auto it = std::begin(events);
 	auto end = std::end(events);
@@ -62,7 +62,10 @@ void async_conditional_append_to_stream(
 		new_event->set_data_content_type(it->is_json() ? 1 : 0);
 		new_event->set_metadata_content_type(0); // see .NET client api
 		new_event->set_data(std::move(it->content()));
-		new_event->set_metadata(std::move(it->metadata()));
+		if (it->metadata().has_value())
+		{
+			new_event->set_metadata(std::move(it->metadata().value()));
+		}
 	}
 
 	auto serialized = message.SerializeAsString();
@@ -71,7 +74,7 @@ void async_conditional_append_to_stream(
 
 	detail::tcp::tcp_package<> package;
 
-	if (connection.settings().default_user_credentials().null())
+	if (connection->settings().default_user_credentials().null())
 	{
 		package = std::move(detail::tcp::tcp_package<>(
 			detail::tcp::tcp_command::write_events,
@@ -87,14 +90,14 @@ void async_conditional_append_to_stream(
 			detail::tcp::tcp_command::write_events,
 			detail::tcp::tcp_flags::authenticated,
 			corr_id,
-			connection.settings().default_user_credentials().username(),
-			connection.settings().default_user_credentials().password(),
+			connection->settings().default_user_credentials().username(),
+			connection->settings().default_user_credentials().password(),
 			(std::byte*)serialized.data(),
 			serialized.size()
 			));
 	}
 
-	connection.async_send(
+	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view)
 	{
