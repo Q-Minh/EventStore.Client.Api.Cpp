@@ -48,7 +48,10 @@ void async_transactional_write(
 		new_event->set_data_content_type(it->is_json() ? 1 : 0);
 		new_event->set_metadata_content_type(0); // see .NET client api
 		new_event->set_data(std::move(it->content()));
-		new_event->set_metadata(std::move(it->metadata()));
+		if (it->metadata().has_value())
+		{
+			new_event->set_metadata(std::move(it->metadata().value()));
+		}
 	}
 
 	auto serialized = request.SerializeAsString();

@@ -94,7 +94,7 @@ where:
 ### Features
 
 - operations on streams :heavy_check_mark:
-- operations on stream metadata
+- operations on stream metadata (without serialization) :heavy_check_mark:
 - unit tests
 - benchmarks
 - subscriptions (IN PROGRESS)

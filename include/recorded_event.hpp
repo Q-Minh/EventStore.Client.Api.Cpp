@@ -45,6 +45,10 @@ public:
 	std::int64_t created() const { return created_; } // maybe use optional
 	std::int64_t created_epoch() const { return created_epoch_; } // maybe use optional
 
+	// make these movable
+	std::string& content() { return content_; }
+	std::string& metadata() { return metadata_; }
+
 private:
 	std::string event_stream_id_;
 	guid_type event_id_;

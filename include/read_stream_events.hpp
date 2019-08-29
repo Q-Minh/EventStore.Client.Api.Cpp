@@ -11,7 +11,7 @@ namespace es {
 
 template <class ConnectionType, class EventsSliceReadHandler>
 void async_read_stream_events(
-	ConnectionType& connection,
+	std::shared_ptr<ConnectionType> const& connection,
 	std::string const& stream,
 	read_direction direction,
 	std::int64_t from_event_number,
@@ -29,7 +29,7 @@ void async_read_stream_events(
 	request.set_event_stream_id(stream);
 	request.set_from_event_number(from_event_number);
 	request.set_max_count(max_count);
-	request.set_require_master(connection.settings().require_master());
+	request.set_require_master(connection->settings().require_master());
 	request.set_resolve_link_tos(resolve_link_tos);
 
 	auto serialized = request.SerializeAsString();
@@ -37,7 +37,7 @@ void async_read_stream_events(
 
 	detail::tcp::tcp_package<> package;
 
-	if (connection.settings().default_user_credentials().null())
+	if (connection->settings().default_user_credentials().null())
 	{
 		package = std::move(detail::tcp::tcp_package<>(
 			direction == read_direction::forward ? detail::tcp::tcp_command::read_stream_events_forward : detail::tcp::tcp_command::read_stream_events_backward,
@@ -53,14 +53,14 @@ void async_read_stream_events(
 			direction == read_direction::forward ? detail::tcp::tcp_command::read_stream_events_forward : detail::tcp::tcp_command::read_stream_events_backward,
 			detail::tcp::tcp_flags::authenticated,
 			corr_id,
-			connection.settings().default_user_credentials().username(),
-			connection.settings().default_user_credentials().password(),
+			connection->settings().default_user_credentials().username(),
+			connection->settings().default_user_credentials().password(),
 			(std::byte*)serialized.data(),
 			serialized.size()
 			));
 	}
 
-	connection.async_send(
+	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler), stream = stream, from_event_number = from_event_number, direction = direction]
 	(std::error_code ec, detail::tcp::tcp_package_view view)

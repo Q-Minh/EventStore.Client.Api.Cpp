@@ -135,11 +135,11 @@ int main(int argc, char** argv)
 			{
 				ES_TRACE("event read\n\tis-resolved={}\n\tevent-id={}\n\tevent-no={}\n\tevent-type={}\n\tmetadata={}\n\tcontent={}",
 					event.is_resolved(),
-					es::to_string(event.event().event_id()),
-					event.event().event_number(),
-					event.event().event_type(),
-					event.event().metadata(),
-					event.event().content()
+					es::to_string(event.event().value().event_id()),
+					event.event().value().event_number(),
+					event.event().value().event_type(),
+					event.event().value().metadata(),
+					event.event().value().content()
 				);
 			}
 
@@ -158,7 +158,7 @@ int main(int argc, char** argv)
 	if (direction_str == "forward")
 	{
 		es::async_read_all_events_forward(
-			*tcp_connection,
+			tcp_connection,
 			from_position,
 			max_count,
 			true,
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
 	else
 	{
 		es::async_read_all_events_backward(
-			*tcp_connection,
+			tcp_connection,
 			from_position,
 			max_count,
 			true,

@@ -123,7 +123,7 @@ int main(int argc, char** argv)
 	// operation has been received or has timed out
 	bool resolve_links_tos = true;
 	es::async_read_stream_event(
-		*tcp_connection,
+		tcp_connection,
 		stream,
 		event_no,
 		resolve_links_tos,
@@ -138,16 +138,16 @@ int main(int argc, char** argv)
 			auto event = read_result.event().value();
 
 			ES_INFO("stream-id={}\n\tresolved={}\n\tevent-number={}\n\tevent-id={}\n\tis-json={}\n\tevent-type={}\n\tcreated={}\n\tcreated_epoch={}\n\tmetadata={}\n\tdata={}",
-				event.event().stream_id(),
+				event.event().value().stream_id(),
 				event.is_resolved(),
-				event.event().event_number(),
-				es::to_string(event.event().event_id()),
-				event.event().is_json(),
-				event.event().event_type(),
-				event.event().created(),
-				event.event().created_epoch(),
-				event.event().metadata(),
-				event.event().content()
+				event.event().value().event_number(),
+				es::to_string(event.event().value().event_id()),
+				event.event().value().is_json(),
+				event.event().value().event_type(),
+				event.event().value().created(),
+				event.event().value().created_epoch(),
+				event.event().value().metadata(),
+				event.event().value().content()
 			);
 		}
 		else

@@ -181,11 +181,12 @@ int main(int argc, char** argv)
 			{
 				ES_INFO("transaction committed successfully!");
 				ES_INFO("successfully appended to stream {}, next expected version={}", stream, result.value().next_expected_version());
+				return;
 			}
 			else
 			{
 				ES_ERROR("transaction failed to commit, {}", ec.message());
-				return 0;
+				return;
 			}
 		});
 	}

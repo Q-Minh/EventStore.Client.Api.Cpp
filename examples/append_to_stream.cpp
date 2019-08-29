@@ -120,8 +120,7 @@ int main(int argc, char** argv)
 	}
 
 	std::vector<es::event_data> events;
-	auto guid = es::guid();
-	es::event_data event{ guid, "Test.Type", true, "{ \"test\": \"data\"}", "test metadata" };
+	es::event_data event{ es::guid(), "Test.Type", true, "{ \"test\": \"data\"}", "test metadata" };
 	events.push_back(event);
 	std::string stream_name = "test-stream";
 
@@ -129,10 +128,10 @@ int main(int argc, char** argv)
 	// be called once a server response with respect to this 
 	// operation has been received or has timed out
 	es::async_append_to_stream(
-		*tcp_connection,
+		tcp_connection,
 		stream_name,
 		std::move(events),
-		[tcp_connection = tcp_connection, guid, stream_name](std::error_code ec, std::optional<es::write_result> result)
+		[tcp_connection = tcp_connection, stream_name](std::error_code ec, std::optional<es::write_result> result)
 	{
 		if (!ec)
 		{

@@ -9,7 +9,7 @@ namespace es {
 
 template <class ConnectionType, class AllEventsSliceReadHandler>
 void async_read_all_events_forward(
-	ConnectionType& connection,
+	std::shared_ptr<ConnectionType> const& connection,
 	position& from_position,
 	int max_count,
 	bool resolve_link_tos,
