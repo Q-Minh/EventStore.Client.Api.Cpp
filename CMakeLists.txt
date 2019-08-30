@@ -58,7 +58,7 @@ INTERFACE
 	include/subscription_settings.hpp
 	include/transaction.hpp
 	include/transactional_write.hpp
-    include/version.hpp
+  include/version.hpp
 	include/write_result.hpp
 
 	# buffer
@@ -88,7 +88,7 @@ INTERFACE
 	# subscription
 	include/subscription/subscription_base.hpp
 	include/subscription/volatile_subscription.hpp
-
+  
     # tcp
 	include/tcp/authenticate.hpp
     include/tcp/connect.hpp
