@@ -26,7 +26,8 @@ enum class communication_errors
 {
 	bad_length_prefix = 1,
 	unexpected_response = 2,
-	server_error = 3
+	server_error = 3,
+	bad_request = 4
 };
 
 enum class stream_errors
@@ -39,6 +40,15 @@ enum class stream_errors
 	version_mismatch = 6,
 	transaction_committed = 7,
 	transaction_rolled_back = 8
+};
+
+enum class subscription_errors
+{
+	unsubscribed = 1,
+	access_denied = 2,
+	not_found = 3,
+	unknown = 4,
+	not_authenticated = 5
 };
 
 namespace error {
@@ -97,6 +107,8 @@ struct communication_category : public std::error_category
 			return "server response could not be understood";
 		case communication_errors::server_error:
 			return "error on server side";
+		case communication_errors::bad_request:
+			return "bad request";
 		default:
 			return "unknown error";
 		}
@@ -136,6 +148,33 @@ struct stream_category : public std::error_category
 	}
 };
 
+struct subscription_category : public std::error_category
+{
+	const char* name() const noexcept override
+	{
+		return "eventstore.subscription";
+	}
+
+	std::string message(int e) const override
+	{
+		switch (static_cast<subscription_errors>(e))
+		{
+		case subscription_errors::access_denied:
+			return "subscription failed due to access denied";
+		case subscription_errors::not_found:
+			return "subscription not found";
+		case subscription_errors::unsubscribed:
+			return "user unsubscribed";
+		case subscription_errors::unknown:
+			return "unsubscribed for unknown reason";
+		case subscription_errors::not_authenticated:
+			return "not authenticated";
+		default:
+			return "unknown error";
+		}
+	}
+};
+
 inline const connection_category& get_connection_category()
 {
 	static connection_category conn_category{};
@@ -152,6 +191,12 @@ inline const stream_category& get_stream_category()
 {
 	static stream_category str_category{};
 	return str_category;
+}
+
+inline const subscription_category& get_subscription_category()
+{
+	static subscription_category sub_category{};
+	return sub_category;
 }
 
 } // error
@@ -171,9 +216,15 @@ inline std::error_code make_error_code(es::stream_errors ec) noexcept
 	return std::error_code{ static_cast<int>(ec), es::error::get_stream_category() };
 }
 
+inline std::error_code make_error_code(es::subscription_errors ec) noexcept
+{
+	return std::error_code{ static_cast<int>(ec), es::error::get_subscription_category() };
+}
+
 static const std::error_category& connection_category = error::get_connection_category();
 static const std::error_category& communication_category = error::get_communication_category();
 static const std::error_category& stream_category = error::get_stream_category();
+static const std::error_category& subscription_category = error::get_subscription_category();
 
 } // es
 
@@ -187,6 +238,9 @@ struct is_error_code_enum<es::communication_errors> : true_type {};
 
 template <>
 struct is_error_code_enum<es::stream_errors> : true_type {};
+
+template <>
+struct is_error_code_enum<es::subscription_errors> : true_type {};
 
 } // std
 

@@ -19,6 +19,7 @@
 #include "duration_conversions.hpp"
 #include "operations_map.hpp"
 
+#include "subscription/subscription_base.hpp"
 #include "tcp/tcp_package.hpp"
 #include "tcp/read.hpp"
 #include "tcp/connect.hpp"
@@ -59,6 +60,8 @@ public:
 		unsigned int get_package_number(self_type& connection) const { return connection.package_number(); }
 		es::operations_map<operation_type>& get_operations_map(self_type& connection) { return connection.operations_map_; }
 		es::operations_map<operation_type> const& get_operations_map(self_type& connection) const { return connection.operations_map_; }
+		es::operations_map<operation_type>& get_subscriptions_map(self_type& connection) { return connection.subscriptions_map_; }
+		es::operations_map<operation_type> const& get_subscriptios_map(self_type& connection) const { return connection.subscriptions_map_; }
 		void async_start_receive(self_type& connection) { connection.async_start_receive(); }
 	};
 	template <class Friend>
@@ -66,6 +69,9 @@ public:
 
 	template <class Friend>
 	using friend_base_type = friend_base<Friend>;
+
+	template <class T, class U>
+	friend class subscription::subscription_base;
 
 	explicit basic_tcp_connection(
 		asio::io_context& ioc,
@@ -78,6 +84,7 @@ public:
 		message_queue_(),
 		package_no_(0),
 		operations_map_(),
+		subscriptions_map_(),
 		buffer_(std::move(buffer))
 	{}
 
@@ -159,7 +166,7 @@ public:
 	// get connection name
 	std::string const& connection_name() const { return connection_name_; }
 
-	// close connection cleanly
+	// close connection cleanly, this method needs help
 	void close()
 	{
 		// do cleanup
@@ -181,6 +188,12 @@ private:
 		{
 			operations_map_[corr_id](ec, view);
 			operations_map_.erase(corr_id);
+			return;
+		}
+		if (subscriptions_map_.contains(corr_id))
+		{
+			subscriptions_map_[corr_id](ec, view);
+			// don't erase it, subscription operations should post their deletion to io_context
 			return;
 		}
 
@@ -272,6 +285,7 @@ private:
 	unsigned int package_no_;
 
 	operations_map_type operations_map_;
+	operations_map_type subscriptions_map_;
 	dynamic_buffer_type buffer_;
 };
 

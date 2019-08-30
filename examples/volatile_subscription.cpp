@@ -1,8 +1,7 @@
 #include <asio/ip/basic_resolver.hpp>
 #include <asio/ip/address.hpp>
 
-#include "read_stream_events_forward.hpp"
-#include "read_stream_events_backward.hpp"
+#include "subscription/volatile_subscription.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
 #include "tcp/discovery_service.hpp"
@@ -11,11 +10,11 @@ int main(int argc, char** argv)
 {
 	GOOGLE_PROTOBUF_VERSION;
 
-	if (argc != 10)
+	if (argc != 7)
 	{
-		ES_ERROR("expected 9 arguments, got {}", argc - 1);
-		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> <from-event-number> <max-number-of-events> [forward | backward] [trace | debug | info | warn | error | critical | off]");
-		ES_ERROR("example: ./read-stream-events 127.0.0.1 1113 admin changeit test-stream 0 10 forward info");
+		ES_ERROR("expected 6 arguments, got {}", argc - 1);
+		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> [trace | debug | info | warn | error | critical | off]");
+		ES_ERROR("example: ./volatile-subscription 127.0.0.1 1113 admin changeit test-stream info");
 		return 0;
 	}
 
@@ -24,18 +23,8 @@ int main(int argc, char** argv)
 	int port = std::stoi(argv[2]);
 	std::string username = argv[3];
 	std::string password = argv[4];
-	std::string stream = argv[5];
-	std::int64_t from_event_number = std::stoll(argv[6]);
-	int max_count = std::stoi(argv[7]);
-
-	std::string direction_str = argv[8];
-	if (direction_str != "forward" && direction_str != "backward")
-	{
-		ES_ERROR("read direction can only be backward or forward");
-		return 0;
-	}
-
-	std::string_view lvl = argv[9];
+	std::string_view stream = argv[5];
+	std::string_view lvl = argv[6];
 	ES_DEFAULT_LOG_LEVEL(lvl);
 
 	asio::io_context ioc;
@@ -117,65 +106,19 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	auto handler = [tcp_connection = tcp_connection, &stream](std::error_code ec, std::optional<es::stream_events_slice> result)
+	auto guid = es::guid();
+	auto subscription = std::make_shared<es::subscription::volatile_subscription<connection_type>>(tcp_connection, guid, stream);
+	ES_INFO("creating volatile subscription to stream={}, subscription-id={}", stream, es::to_string(guid));
+	subscription->async_start(
+		[self = subscription](es::resolved_event& event)
 	{
-		if (!ec)
-		{
-			auto value = result.value();
-			ES_INFO("stream={}, from-event-number={}, next-event-number={}, last-event-number={}, is-end-of-stream={}, read-direction={}",
-				value.stream(),
-				value.from_event_number(),
-				value.next_event_number(),
-				value.last_event_number(),
-				value.is_end_of_stream(),
-				value.stream_read_direction() == es::read_direction::forward ? "forward" : "backward"
-			);
-
-			for (auto const& event : value.events())
-			{
-				ES_TRACE("event read\n\tis-resolved={}\n\tevent-id={}\n\tevent-no={}\n\tevent-type={}\n\tmetadata={}\n\tcontent={}",
-					event.is_resolved(),
-					es::to_string(event.event().value().event_id()),
-					event.event().value().event_number(),
-					event.event().value().event_type(),
-					event.event().value().metadata(),
-					event.event().value().content()
-				);
-			}
-
-			ES_INFO("got {} events", value.events().size());
-			return;
-		}
-		else
-		{
-			ES_ERROR("error trying to read stream events from stream {} : {}", stream, ec.message());
-			return;
-		}
-	};
-
-	// read stream events in one direction or the other
-	if (direction_str == "forward")
+		ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
+	},
+		[](std::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
 	{
-		es::async_read_stream_events_forward(
-			tcp_connection,
-			stream,
-			from_event_number,
-			max_count,
-			true,
-			std::move(handler)
-		);
+		ES_ERROR("subscription dropped : {}", ec.message());
 	}
-	else
-	{
-		es::async_read_stream_events_backward(
-			tcp_connection,
-			stream,
-			from_event_number,
-			max_count,
-			true,
-			std::move(handler)
-		);
-	}
+	);
 
 	ioc.run();
 

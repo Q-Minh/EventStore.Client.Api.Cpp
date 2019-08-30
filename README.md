@@ -95,16 +95,21 @@ where:
 
 - operations on streams :heavy_check_mark:
 - operations on stream metadata (without serialization) :heavy_check_mark:
-- unit tests
-- benchmarks
-- subscriptions (IN PROGRESS)
+- volatile subscriptions :heavy_check_mark:
+- catchup subscriptions (IN PROGRESS)
+- persistent subscriptions
 - transactions :heavy_check_mark:
 - connection configuration (retries, node preference, ssl, queue size, etc)
 - user management
 - cluster node discovery
+- projections
+
+### Others
+
+- unit tests
+- benchmarks
 - documentation
 - more examples
-- projections
 
 *Note* : Only TCP communication is considered for the time being. EventStore also offers an HTTP api.
 

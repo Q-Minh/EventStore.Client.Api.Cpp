@@ -55,6 +55,7 @@ INTERFACE
 	include/start_transaction.hpp
 	include/stream_events_slice.hpp
 	include/stream_metadata_result_raw.hpp
+	include/subscription_settings.hpp
 	include/transaction.hpp
 	include/transactional_write.hpp
     include/version.hpp
@@ -83,6 +84,10 @@ INTERFACE
 	include/system/metadata.hpp
 	include/system/event_types.hpp
 	include/system/streams.hpp
+
+	# subscription
+	include/subscription/subscription_base.hpp
+	include/subscription/volatile_subscription.hpp
 
     # tcp
 	include/tcp/authenticate.hpp
@@ -144,6 +149,7 @@ build_executable(read-stream-events "examples/read_stream_events.cpp" "${_source
 build_executable(read-all-events "examples/read_all_events.cpp" "${_sources}")
 build_executable(transaction "examples/transaction.cpp" "${_sources}")
 build_executable(stream-metadata "examples/stream_metadata.cpp" "${_sources}")
+build_executable(volatile-subscription "examples/volatile_subscription.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")
