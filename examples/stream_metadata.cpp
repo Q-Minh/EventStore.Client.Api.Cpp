@@ -91,6 +91,7 @@ int main(int argc, char** argv)
 				es::to_string(result.value().connection_id()),
 				ec.message()
 			);
+      
 			is_connected = true;
 		}
 		else
