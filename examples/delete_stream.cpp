@@ -76,16 +76,16 @@ int main(int argc, char** argv)
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info
 	tcp_connection->async_connect(
-		[tcp_connection = tcp_connection, &is_connected, &notification](asio::error_code ec, es::detail::tcp::tcp_package_view view)
+		[tcp_connection = tcp_connection, &is_connected, &notification](asio::error_code ec, std::optional<es::connection_result> result)
 	{
 		notification = true;
 
 		if (!ec || ec == es::connection_errors::authentication_failed)
 		{
-			// on success, command should be client identified
-			if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
-
-			ES_INFO("client has been identified, {}", ec.message());
+			ES_INFO("client has been identified with connection-id={}, {}",
+				es::to_string(result.value().connection_id()),
+				ec.message()
+			);
 			is_connected = true;
 		}
 		else

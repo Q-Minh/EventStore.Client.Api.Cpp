@@ -48,7 +48,8 @@ public:
 	{
 		deadline_ = std::make_shared<waitable_timer_type>(connection->get_io_context());
 		auto conn = connection_.lock();
-		info_.set_correlation_id(es::guid());
+		// we need to make this information available in the identify callback, so that connection_id is propagated to app code
+		info_.set_correlation_id(es::guid()); 
 		info_.set_timestamp(conn->elapsed()); // not really needed, as we have a timer anyways...
 	}
 
@@ -79,17 +80,24 @@ public:
 			);
 
 			conn->async_send(std::move(identify_package));
-			auto& op_manager = this->get_operations_manager(*conn);
-			using operation_type = typename std::decay_t<decltype(op_manager)>::operation_type;
+			auto& op_map = this->get_operations_map(*conn);
+			using operation_type = typename std::decay_t<decltype(op_map)>::operation_type;
 
-			op_manager.register_op(
+			op_map.register_op(
 				info_.correlation_id(),
 				operation_type(
-					[handler = std::move(handler_), deadline = deadline_, authenticated=authenticated_](asio::error_code ec, tcp_package_view view)
+					[handler = std::move(handler_), deadline = deadline_, authenticated=authenticated_, corr_id=info_.correlation_id()](asio::error_code ec, tcp_package_view view)
 			{
 				deadline->cancel();
 				if (!authenticated && !ec) ec = make_error_code(connection_errors::authentication_failed);
-				handler(ec, view);
+				if (!ec || ec == connection_errors::authentication_failed)
+				{
+					handler(ec, view, corr_id);
+				}
+				else
+				{
+					handler(ec, view);
+				}
 			})
 			);
 			ES_TRACE("identify_op::initiate : package send initiated, handler registered to operations manager");
@@ -137,8 +145,8 @@ public:
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
 		
-		auto& op_manager = this->get_operations_manager(*conn);
-		using operation_type = typename std::decay_t<decltype(op_manager)>::operation_type;
+		auto& op_map = this->get_operations_map(*conn);
+		using operation_type = typename std::decay_t<decltype(op_map)>::operation_type;
 
 		if (!ec)
 		{
@@ -153,7 +161,7 @@ public:
 
 			// else notify user of identify operation timing out
 			ec = make_error_code(connection_errors::operation_timeout);
-			op_manager[info_.correlation_id()](ec, {});
+			op_map[info_.correlation_id()](ec, {});
 			return;
 		}
 		
@@ -161,7 +169,7 @@ public:
 		// else, there was an error
 		if (ec != asio::error::operation_aborted)
 		{
-			op_manager[info_.correlation_id()](ec, {});
+			op_map[info_.correlation_id()](ec, {});
 			return;
 		}
 	}

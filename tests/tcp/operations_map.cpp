@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 
-#include "operations_manager.hpp"
+#include "operations_map.hpp"
 #include "guid.hpp"
 
 static int op_func_test = 0;
@@ -10,15 +10,15 @@ void op_func2(asio::error_code ec, typename es::operation<>::package_view_type v
 void op_func_bind1(asio::error_code ec, typename es::operation<>::package_view_type view, int& op_func_bind_test) { ++op_func_bind_test; }
 void op_func_bind2(asio::error_code ec, typename es::operation<>::package_view_type view, int& op_func_bind_test) { ++op_func_bind_test; }
 
-TEST_CASE("operations_manager has random access by guid to type erased operations", "[operations_manager]")
+TEST_CASE("operations_map has random access by guid to type erased operations", "[operations_map]")
 {
 	using operation_type = es::operation<>;
-	using operations_manager_type = es::operations_manager<operation_type>;
+	using operations_map_type = es::operations_map<operation_type>;
 	using package_view_type = typename operation_type::package_view_type;
 
-	operations_manager_type ops_manager;
+	operations_map_type ops_manager;
 
-	SECTION("operations_manager can register and call lambdas")
+	SECTION("operations_map can register and call lambdas")
 	{
 		auto key1 = es::guid();
 		int test1 = 0;
@@ -35,7 +35,7 @@ TEST_CASE("operations_manager has random access by guid to type erased operation
 		REQUIRE(test1 == 10);
 		REQUIRE(test2 == 6);
 	}
-	SECTION("operations_manager can register and call functions")
+	SECTION("operations_map can register and call functions")
 	{
 		auto key1 = es::guid();
 		operation_type op1(&op_func1);
@@ -49,7 +49,7 @@ TEST_CASE("operations_manager has random access by guid to type erased operation
 		ops_manager[key2](asio::error_code{}, package_view_type{ nullptr, 0 });
 		REQUIRE(op_func_test == 2);
 	}
-	SECTION("operations_manager can register and call std::bind function objects")
+	SECTION("operations_map can register and call std::bind function objects")
 	{
 		auto key1 = es::guid();
 		int test1 = 0;

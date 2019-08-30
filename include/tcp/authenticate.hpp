@@ -67,10 +67,10 @@ public:
 		);
 
 		conn->async_send(std::move(auth_package));
-		auto& op_manager = this->get_operations_manager(*conn);
-		using operation_type = typename std::decay_t<decltype(op_manager)>::operation_type;
+		auto& op_map = this->get_operations_map(*conn);
+		using operation_type = typename std::decay_t<decltype(op_map)>::operation_type;
 
-		op_manager.register_op(
+		op_map.register_op(
 			info_.correlation_id(),
 			operation_type(
 				[handler = std::move(handler_), deadline = deadline_](asio::error_code ec, tcp_package_view view) mutable
@@ -92,22 +92,22 @@ public:
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
 
-		auto& op_manager = this->get_operations_manager(*conn);
-		using operation_type = typename std::decay_t<decltype(op_manager)>::operation_type;
+		auto& op_map = this->get_operations_map(*conn);
+		using operation_type = typename std::decay_t<decltype(op_map)>::operation_type;
 
 		if (!ec)
 		{
 			ES_ERROR("authentication request timed out");
 			// authentication timed out
 			ec = make_error_code(connection_errors::authentication_timeout);
-			op_manager[info_.correlation_id()](ec, {});
+			op_map[info_.correlation_id()](ec, {});
 			return;
 		}
 
 		// if operation was aborted, it means response was received in time
 		if (ec != asio::error::operation_aborted)
 		{
-			op_manager[info_.correlation_id()](ec, {});
+			op_map[info_.correlation_id()](ec, {});
 			return;
 		}
 	}

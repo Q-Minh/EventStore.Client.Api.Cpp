@@ -29,6 +29,7 @@ INTERFACE
 	include/append_to_stream.hpp
 	include/commit_transaction.hpp
 	include/conditional_append_to_stream.hpp
+	include/connection_result.hpp
     include/connection_settings.hpp
 	include/delete_stream.hpp
 	include/delete_stream_result.hpp
@@ -38,7 +39,7 @@ INTERFACE
 	include/get_stream_metadata.hpp
     include/guid.hpp
     include/logger.hpp
-    include/operations_manager.hpp
+    include/operations_map.hpp
 	include/position.hpp
 	include/read_all_events.hpp
 	include/read_all_events_backward.hpp
@@ -54,13 +55,15 @@ INTERFACE
 	include/start_transaction.hpp
 	include/stream_events_slice.hpp
 	include/stream_metadata_result_raw.hpp
+	include/subscription_settings.hpp
 	include/transaction.hpp
 	include/transactional_write.hpp
-    include/version.hpp
+  include/version.hpp
 	include/write_result.hpp
 
 	# buffer
 	include/buffer/basic_mutable_buffer_sequence.hpp
+	include/buffer/buffer_queue.hpp
 
     # connection
     include/connection/authentication_info.hpp
@@ -82,6 +85,10 @@ INTERFACE
 	include/system/event_types.hpp
 	include/system/streams.hpp
 
+	# subscription
+	include/subscription/subscription_base.hpp
+	include/subscription/volatile_subscription.hpp
+  
     # tcp
 	include/tcp/authenticate.hpp
     include/tcp/connect.hpp
@@ -142,6 +149,7 @@ build_executable(read-stream-events "examples/read_stream_events.cpp" "${_source
 build_executable(read-all-events "examples/read_all_events.cpp" "${_sources}")
 build_executable(transaction "examples/transaction.cpp" "${_sources}")
 build_executable(stream-metadata "examples/stream_metadata.cpp" "${_sources}")
+build_executable(volatile-subscription "examples/volatile_subscription.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")
@@ -151,9 +159,10 @@ PRIVATE
     ${_sources}
 
 	# unit tests
-	"tests/tcp/operations_manager.cpp"
+	"tests/tcp/operations_map.cpp"
 	"tests/tcp/read.cpp"
     "tests/tcp/tcp_package.cpp"
+	"tests/buffer/buffer_queue.cpp"
 
 	# headers
 	"tests/mock_async_read_stream.hpp"

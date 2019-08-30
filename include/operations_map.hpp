@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef ES_OPERATIONS_MANAGER_HPP
-#define ES_OPERATIONS_MANAGER_HPP
+#ifndef ES_operations_map_HPP
+#define ES_operations_map_HPP
 
 #include <memory>
 #include <unordered_map>
@@ -93,13 +93,13 @@ private:
 };
 
 template <class Operation, class Allocator = std::allocator<std::pair<const es::guid_type, Operation>>>
-class operations_manager
+class operations_map
 {
 public:
 	using operation_type = Operation;
 	using key_type = es::guid_type;
 
-	explicit operations_manager(
+	explicit operations_map(
 		Allocator const& alloc = Allocator(),
 		std::size_t initial_capacity = 0
 	) : operations_(initial_capacity, alloc)
@@ -129,4 +129,4 @@ private:
 
 } // es
 
-#endif // ES_OPERATIONS_MANAGER_HPP
+#endif // ES_operations_map_HPP
