@@ -121,7 +121,7 @@ int main(int argc, char** argv)
 	{
 		if (!ec)
 		{
-			auto value = result.value(); 
+			auto& value = result.value(); 
 			ES_INFO("from-commit-position={}, from-prepare-position={}, next-commit-position={}, next-prepare-position={}, is-end-of-stream={}, read-direction={}",
 				value.from_position().commit_position(),
 				value.from_position().prepare_position(),

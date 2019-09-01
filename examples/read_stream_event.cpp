@@ -131,11 +131,11 @@ int main(int argc, char** argv)
 	{
 		if (!ec)
 		{
-			auto read_result = result.value();
+			auto& read_result = result.value();
 			ES_INFO("read event {} from stream {}", read_result.event_number(), read_result.stream());
 
 			if (!read_result.event().has_value()) return;
-			auto event = read_result.event().value();
+			auto& event = read_result.event().value();
 
 			ES_INFO("stream-id={}\n\tresolved={}\n\tevent-number={}\n\tevent-id={}\n\tis-json={}\n\tevent-type={}\n\tcreated={}\n\tcreated_epoch={}\n\tmetadata={}\n\tdata={}",
 				event.event().value().stream_id(),

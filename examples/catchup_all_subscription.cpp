@@ -177,6 +177,10 @@ int main(int argc, char** argv)
 	}
 	);
 
+	ioc.run_for(std::chrono::seconds(5));
+
+	subscription->unsubscribe();
+
 	ioc.run();
 
 	return 0;

@@ -56,6 +56,7 @@ public:
 			if (ec)
 			{
 				this->unsubscribe(ec, std::move(dropped));
+				return;
 			}
 			// let derived class handler package first, and if he can't handle it, 
 			// it will return false to delegate it to the base (this class)
@@ -153,6 +154,20 @@ public:
 		);
 	}
 
+	void unsubscribe()
+	{
+		std::error_code ec = make_error_code(subscription_errors::unsubscribed);
+		connection_->subscriptions_map_[key_](ec, {});
+	}
+
+	std::string const& stream() const { return stream_; }
+	std::optional<std::int64_t> const& last_event_number() const { return last_event_number_; }
+	std::optional<std::int64_t> const& last_commit_position() const { return last_commit_position_; }
+	bool is_subscribed() const { return subscribed_; }
+
+protected:
+	// derived classes will deal with these setters
+
 	template <class SubscriptionDroppedHandler>
 	void unsubscribe(std::error_code ec, SubscriptionDroppedHandler&& dropped)
 	{
@@ -170,13 +185,6 @@ public:
 		);
 	}
 
-	std::string const& stream() const { return stream_; }
-	std::optional<std::int64_t> const& last_event_number() const { return last_event_number_; }
-	std::optional<std::int64_t> const& last_commit_position() const { return last_commit_position_; }
-	bool is_subscribed() const { return subscribed_; }
-
-protected:
-	// derived classes will deal with these setters
 	void set_last_event_number(std::int64_t number) { last_event_number_ = number; }
 	void set_last_commit_position(std::int64_t position) { last_commit_position_ = position; }
 	void set_is_subscribed(bool subscribed) { subscribed_ = subscribed; }

@@ -121,7 +121,7 @@ int main(int argc, char** argv)
 	{
 		if (!ec)
 		{
-			auto value = result.value();
+			auto& value = result.value();
 			ES_INFO("stream={}, from-event-number={}, next-event-number={}, last-event-number={}, is-end-of-stream={}, read-direction={}",
 				value.stream(),
 				value.from_event_number(),
