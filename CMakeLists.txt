@@ -86,6 +86,7 @@ INTERFACE
 	include/system/streams.hpp
 
 	# subscription
+	include/subscription/catchup_subscription.hpp
 	include/subscription/subscription_base.hpp
 	include/subscription/volatile_subscription.hpp
   

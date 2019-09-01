@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info
 	tcp_connection->async_connect(
-		[tcp_connection = tcp_connection, &is_connected, &notification](asio::error_code ec, std::optional<es::connection_result> result)
+		[tcp_connection = tcp_connection, &is_connected, &notification](std::error_code ec, std::optional<es::connection_result> result)
 	{
 		notification = true;
 
@@ -107,18 +107,36 @@ int main(int argc, char** argv)
 	}
 
 	auto guid = es::guid();
-	auto subscription = std::make_shared<es::subscription::volatile_subscription<connection_type>>(tcp_connection, guid, stream);
-	ES_INFO("creating volatile subscription to stream={}, subscription-id={}", stream, es::to_string(guid));
-	subscription->async_start(
-		[self = subscription](es::resolved_event& event)
+	if (stream == "all")
 	{
-		ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
-	},
-		[](std::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
-	{
-		ES_ERROR("subscription dropped : {}", ec.message());
+		auto subscription = es::make_volatile_all_subscription(tcp_connection, guid);
+		ES_INFO("creating volatile subscription to stream={}, subscription-id={}", stream, es::to_string(guid));
+		subscription->async_start(
+			[self = subscription](es::resolved_event& event)
+		{
+			ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
+		},
+			[self = subscription](std::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
+		{
+			ES_ERROR("subscription dropped : {}", ec.message());
+		}
+		);
 	}
-	);
+	else
+	{
+		auto subscription = es::make_volatile_subscription(tcp_connection, guid, stream);
+		ES_INFO("creating volatile subscription to stream={}, subscription-id={}", stream, es::to_string(guid));
+		subscription->async_start(
+			[self = subscription](es::resolved_event& event)
+		{
+			ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
+		},
+			[self = subscription](std::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
+		{
+			ES_ERROR("subscription dropped : {}", ec.message());
+		}
+		);
+	}
 
 	ioc.run();
 
