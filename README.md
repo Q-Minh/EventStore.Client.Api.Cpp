@@ -96,8 +96,8 @@ where:
 - operations on streams :heavy_check_mark:
 - operations on stream metadata (without serialization) :heavy_check_mark:
 - volatile subscriptions :heavy_check_mark:
-- catchup subscriptions (IN PROGRESS)
-- persistent subscriptions
+- catchup subscriptions :heavy_check_mark:
+- persistent subscriptions (IN PROGRESS)
 - transactions :heavy_check_mark:
 - connection configuration (retries, node preference, ssl, queue size, etc)
 - user management

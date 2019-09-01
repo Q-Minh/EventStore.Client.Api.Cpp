@@ -37,7 +37,8 @@ public:
 		stream_(stream), 
 		last_event_number_(), 
 		last_commit_position_(),
-		subscribed_(false)
+		subscribed_(false),
+		handle_guard_(false)
 	{}
 
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
@@ -50,13 +51,15 @@ public:
 			key=key_, this]
 		(std::error_code ec, detail::tcp::tcp_package_view view)
 		{
+			if (handle_guard_) return;
+
 			if (ec)
 			{
 				this->unsubscribe(ec, std::move(dropped));
 			}
 			// let derived class handler package first, and if he can't handle it, 
 			// it will return false to delegate it to the base (this class)
-			if (static_cast<child_type*>(this)->on_package_received(view, event_appeared)) return;
+			if (static_cast<child_type*>(this)->on_package_received(view, event_appeared, dropped)) return;
 
 			switch (view.command())
 			{
@@ -153,6 +156,9 @@ public:
 	template <class SubscriptionDroppedHandler>
 	void unsubscribe(std::error_code ec, SubscriptionDroppedHandler&& dropped)
 	{
+		this->set_is_subscribed(false);
+		this->lock_handle_guard();
+
 		asio::post(
 			connection_->get_io_context(),
 			[dropped = std::move(dropped),
@@ -174,8 +180,11 @@ protected:
 	void set_last_event_number(std::int64_t number) { last_event_number_ = number; }
 	void set_last_commit_position(std::int64_t position) { last_commit_position_ = position; }
 	void set_is_subscribed(bool subscribed) { subscribed_ = subscribed; }
+
 	std::shared_ptr<connection_type> const& connection() const { return connection_; }
 	op_key_type const& correlation_id() const { return key_; }
+	void lock_handle_guard() { handle_guard_ = true; }
+	void unlock_handle_guard() { handle_guard_ = false; }
 
 private:
 	std::shared_ptr<connection_type> connection_; // make this shared or weak ??
@@ -184,6 +193,7 @@ private:
 	std::optional<std::int64_t> last_event_number_;
 	std::optional<std::int64_t> last_commit_position_;
 	bool subscribed_;
+	bool handle_guard_;
 };
 
 } // subscription

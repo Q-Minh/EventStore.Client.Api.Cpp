@@ -47,6 +47,8 @@ public:
 		}
 	}
 
+	resolved_event(resolved_event&& other) = default;
+
 	// might be changed to standard optional
 	std::optional<recorded_event> const& event() const { return event_; }
 

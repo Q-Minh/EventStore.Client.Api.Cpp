@@ -16,6 +16,11 @@ public:
 		: commit_position_(commit_position), prepare_position_(prepare_position)
 	{}
 
+	position(position const& other) = default;
+	position(position&& other) = default;
+	position& operator=(position const& other) = default;
+	position& operator=(position&& other) noexcept = default;
+
 	static position start() { return position(0, 0); }
 	static position end() { return position(-1, -1); }
 

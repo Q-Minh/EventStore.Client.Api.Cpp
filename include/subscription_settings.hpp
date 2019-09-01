@@ -14,6 +14,9 @@ class subscription_settings
 public:
 	friend class subscription_settings_builder;
 
+	subscription_settings(subscription_settings const& other) = default;
+	subscription_settings(subscription_settings&& other) = default;
+
 	int max_live_queue_size() const { return max_live_queue_size_; }
 	int read_batch_size() const { return read_batch_size_; }
 	bool resolve_link_tos() const { return resolve_link_tos_; }
@@ -37,6 +40,7 @@ public:
 	self_type& with_read_batch_size(int size) { settings_.read_batch_size_ = size; return *this; }
 	self_type& resolve_link_tos(bool resolve) { settings_.resolve_link_tos_ = resolve; return *this; }
 	self_type& with_subscription_name(std::string_view name) { settings_.subscription_name_ = name; return *this; }
+	subscription_settings build() { return std::move(settings_); }
 
 private:
 	subscription_settings settings_;

@@ -66,10 +66,11 @@ public:
 		this->connection()->async_send(std::move(package));
 	}
 
-	template <class EventAppearedHandler>
+	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	bool on_package_received(
 		detail::tcp::tcp_package_view view, 
-		EventAppearedHandler& event_appeared
+		EventAppearedHandler& event_appeared,
+		SubscriptionDroppedHandler& // not used in volatile subscription
 	)
 	{
 		if (view.command() == detail::tcp::tcp_command::subscription_confirmation)
@@ -77,6 +78,7 @@ public:
 			message::SubscriptionConfirmation response;
 			response.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 			this->set_last_commit_position(response.last_commit_position());
+			this->set_is_subscribed(true);
 			if (response.has_last_event_number())
 				this->set_last_event_number(response.last_event_number());
 			
@@ -98,7 +100,27 @@ private:
 	bool resolve_link_tos_;
 };
 
+} // subscription
+
+template <class ConnectionType>
+auto make_volatile_subscription(
+	std::shared_ptr<ConnectionType> const& connection,
+	typename ConnectionType::operations_map_type::key_type const& key,
+	std::string_view stream,
+	bool resolve_link_tos = true) -> std::shared_ptr<subscription::volatile_subscription<ConnectionType>>
+{
+	return std::make_shared<subscription::volatile_subscription<ConnectionType>>(connection, key, stream, resolve_link_tos);
 }
+
+template <class ConnectionType>
+auto make_volatile_all_subscription(
+	std::shared_ptr<ConnectionType> const& connection,
+	typename ConnectionType::operations_map_type::key_type const& key,
+	bool resolve_link_tos = true) -> std::shared_ptr<subscription::volatile_subscription<ConnectionType>>
+{
+	return std::make_shared<subscription::volatile_subscription<ConnectionType>>(connection, key, "", resolve_link_tos);
 }
+
+} // es
 
 #endif // ES_VOLATILE_SUBSCRIPTION_HPP

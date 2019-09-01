@@ -86,6 +86,8 @@ INTERFACE
 	include/system/streams.hpp
 
 	# subscription
+	include/subscription/catchup_all_subscription.hpp
+	include/subscription/catchup_subscription.hpp
 	include/subscription/subscription_base.hpp
 	include/subscription/volatile_subscription.hpp
   
@@ -150,6 +152,8 @@ build_executable(read-all-events "examples/read_all_events.cpp" "${_sources}")
 build_executable(transaction "examples/transaction.cpp" "${_sources}")
 build_executable(stream-metadata "examples/stream_metadata.cpp" "${_sources}")
 build_executable(volatile-subscription "examples/volatile_subscription.cpp" "${_sources}")
+build_executable(catchup-subscription "examples/catchup_subscription.cpp" "${_sources}")
+build_executable(catchup-all-subscription "examples/catchup_all_subscription.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")
