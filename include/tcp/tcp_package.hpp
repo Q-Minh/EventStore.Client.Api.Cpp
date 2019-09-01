@@ -255,7 +255,8 @@ public:
 
 	~tcp_package()
 	{
-		alloc_.deallocate(package_, length_ + 4);
+		if (package_ != nullptr)
+			alloc_.deallocate(package_, length_ + 4);
 	}
 private:
 	std::byte* package_;
