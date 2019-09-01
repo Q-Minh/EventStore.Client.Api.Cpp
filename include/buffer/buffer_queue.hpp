@@ -105,7 +105,8 @@ public:
 			if (front_chunk_idx_ == back_chunk_idx_ + 1)
 			{
 				deque_.pop_front();
-				front_chunk_idx_ = back_chunk_idx_ = 0;
+				front_chunk_idx_ = 0;
+				back_chunk_idx_ = -1;
 				return;
 			}
 		}

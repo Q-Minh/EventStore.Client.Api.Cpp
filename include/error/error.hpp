@@ -48,7 +48,9 @@ enum class subscription_errors
 	access_denied = 2,
 	not_found = 3,
 	unknown = 4,
-	not_authenticated = 5
+	not_authenticated = 5,
+	subscription_request_not_sent = 6,
+	bad_subscription_confirmation = 7
 };
 
 namespace error {
@@ -169,6 +171,10 @@ struct subscription_category : public std::error_category
 			return "unsubscribed for unknown reason";
 		case subscription_errors::not_authenticated:
 			return "not authenticated";
+		case subscription_errors::subscription_request_not_sent:
+			return "an error occurred before sending the subscription request";
+		case subscription_errors::bad_subscription_confirmation:
+			return "subscription confirmation did not have last_event_number or last_commit_position";
 		default:
 			return "unknown error";
 		}

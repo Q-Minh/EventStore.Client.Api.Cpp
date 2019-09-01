@@ -5,6 +5,7 @@
 
 #include <deque>
 
+#include "position.hpp"
 #include "read_all_events.hpp"
 #include "read_stream_events.hpp"
 #include "subscription_base.hpp"
@@ -15,38 +16,36 @@ namespace es {
 namespace subscription {
 
 template <class ConnectionType>
-class catchup_subscription
-	: public subscription_base<ConnectionType, catchup_subscription<ConnectionType>>
+class catchup_all_subscription
+	: public subscription_base<ConnectionType, catchup_all_subscription<ConnectionType>>
 {
 public:
 	using connection_type = ConnectionType;
 	using operations_map_type = typename connection_type::operations_map_type;
 	using op_key_type = typename operations_map_type::key_type;
-	using self_type = catchup_subscription<connection_type>;
+	using self_type = catchup_all_subscription<connection_type>;
 	using base_type = subscription_base<connection_type, self_type>;
 
-	explicit catchup_subscription(
+	explicit catchup_all_subscription(
 		std::shared_ptr<connection_type> const& connection,
 		op_key_type const& key,
-		std::string_view stream,
-		std::int64_t from_event_number,
+		position from_position,
 		subscription_settings const& settings
-	) : base_type(connection, key, stream),
-		current_event_number_(from_event_number),
+	) : base_type(connection, key, ""),
+		current_position_(from_position),
 		settings_(settings),
-		event_buffer_(),
-		catching_up_(false)
+		event_buffer_()
 	{}
 
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
 		catch_up_events(
-			current_event_number_,
+			current_position_,
 			settings_.read_batch_size(),
 			[event_appeared = std::forward<EventAppearedHandler>(event_appeared),
 			dropped = std::forward<SubscriptionDroppedHandler>(dropped),
-			this](std::error_code ec, std::optional<stream_events_slice> result)
+			this](std::error_code ec, std::optional<all_events_slice> result)
 		{
 			if (!ec)
 			{
@@ -55,9 +54,8 @@ public:
 				for (auto& event : value.events())
 				{
 					event_appeared(event);
-					++current_event_number_;
 				}
-
+				
 				if (value.is_end_of_stream())
 				{
 					this->do_async_start(std::move(event_appeared), std::move(dropped));
@@ -65,6 +63,7 @@ public:
 				}
 				else
 				{
+					current_position_ = value.next_position();
 					this->async_start(std::move(event_appeared), std::move(dropped));
 					return;
 				}
@@ -91,23 +90,15 @@ public:
 			response.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 			this->set_last_commit_position(response.last_commit_position());
 			this->set_is_subscribed(true);
-			// for a subscription to a stream (as opposed to the all stream),
-			// there should always be an event number
 			if (response.has_last_event_number())
-			{
 				this->set_last_event_number(response.last_event_number());
-				if (response.last_event_number() > current_event_number_)
-				{
-					// catch up all missing events
-					std::int64_t count = response.last_event_number() - current_event_number_;
-					this->catch_up_missed_events(count, event_appeared, dropped);
-				}
-			}
-			else
+
+			position_to_catch_up_to_ = position{ response.last_commit_position(), response.last_commit_position() };
+			if (position_to_catch_up_to_ > current_position_)
 			{
-				this->unsubscribe(make_error_code(subscription_errors::bad_subscription_confirmation), std::move(dropped));
+				this->catch_up_missed_events(settings_.read_batch_size(), event_appeared, dropped);
 			}
-			
+
 			return true;
 		}
 		if (view.command() == detail::tcp::tcp_command::stream_event_appeared)
@@ -115,23 +106,22 @@ public:
 			message::StreamEventAppeared message;
 			message.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 
-			event_buffer_.emplace_back(*message.mutable_event());
 			//resolved_event resolved{ *message.mutable_event() };
-			//std::int64_t event_no = resolved.event().value().event_number();
-			std::int64_t event_no = event_buffer_.front().event().value().event_number();
-
-			// this would mean we have missed events
-			if (this->last_event_number().value() > current_event_number_) return true;
+			//position event_pos = resolved.original_position();
+			event_buffer_.emplace_back(*message.mutable_event());
 			
+			// we are currently catching up
+			if (position_to_catch_up_to_ > current_position_) return true;
+
 			int i = 0;
 			while (!event_buffer_.empty() && i < settings_.read_batch_size())
 			{
+				current_position_ = event_buffer_.front().original_position().value();
 				event_appeared(event_buffer_.front());
 				event_buffer_.pop_front();
-				++current_event_number_;
 				++i;
 			}
-		
+
 			return true;
 		}
 
@@ -176,12 +166,11 @@ private:
 		this->connection()->async_send(std::move(package));
 	}
 
-	template <class EventSliceReadHandler>
-	void catch_up_events(std::int64_t from, std::int64_t count, EventSliceReadHandler&& handler)
+	template <class AllEventSliceReadHandler>
+	void catch_up_events(position const& from, std::int64_t count, AllEventSliceReadHandler&& handler)
 	{
-		async_read_stream_events(
+		async_read_all_events(
 			this->connection(),
-			this->stream(),
 			read_direction::forward,
 			from,
 			(int)count,
@@ -193,24 +182,32 @@ private:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void catch_up_missed_events(std::int64_t count, EventAppearedHandler& event_appeared, SubscriptionDroppedHandler& dropped)
 	{
-		this->catch_up_events(current_event_number_, count,
-			[&event_appeared, &dropped, count = count, this](std::error_code ec, std::optional<stream_events_slice> result)
+		this->catch_up_events(current_position_, count,
+			[&event_appeared, &dropped, count = count, this](std::error_code ec, std::optional<all_events_slice> result)
 		{
 			if (!ec)
 			{
 				auto& value = result.value();
 
-				auto mutable_count = count;
+				bool continue_next_batch = true;
 				for (auto& event : value.events())
 				{
+					current_position_ = event.original_position().value();
+
+					// if we've read up to the first event received from the subscription, 
+					// stop catching up
+					if (current_position_ == position_to_catch_up_to_)
+					{
+						continue_next_batch = false;
+						break;
+					}
+
 					event_appeared(event);
-					++current_event_number_;
-					--mutable_count;
 				}
 
-				if (mutable_count > 0)
+				if (continue_next_batch)
 				{
-					this->catch_up_missed_events(mutable_count, event_appeared, dropped);
+					this->catch_up_missed_events(count, event_appeared, dropped);
 				}
 
 				return;
@@ -223,23 +220,22 @@ private:
 		});
 	}
 private:
-	std::int64_t current_event_number_;
+	position current_position_;
 	subscription_settings settings_;
 	buffer::buffer_queue<resolved_event, std::deque, 25> event_buffer_;
-	bool catching_up_;
+	position position_to_catch_up_to_;
 };
 
 } // subscription
 
 template <class ConnectionType>
-auto make_catchup_subscription(
+auto make_catchup_all_subscription(
 	std::shared_ptr<ConnectionType> const& connection,
 	typename ConnectionType::operations_map_type::key_type const& key,
-	std::string_view stream,
-	std::int64_t from_event_number,
-	subscription_settings const& settings) -> std::shared_ptr<subscription::catchup_subscription<ConnectionType>>
+	position from_position,
+	subscription_settings const& settings) -> std::shared_ptr<subscription::catchup_all_subscription<ConnectionType>>
 {
-	return std::make_shared<subscription::catchup_subscription<ConnectionType>>(connection, key, stream, from_event_number, settings);
+	return std::make_shared<subscription::catchup_all_subscription<ConnectionType>>(connection, key, from_position, settings);
 }
 
 } // es

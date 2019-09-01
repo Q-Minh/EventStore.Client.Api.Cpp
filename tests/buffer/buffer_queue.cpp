@@ -265,4 +265,23 @@ TEST_CASE("buffer_queue has consistent accessors/modifiers", "[buffer][buffer_qu
 		REQUIRE(queue_.empty());
 		REQUIRE(copy_ctor_count == 0);
 	}
+	SECTION("buffer queue fill up, empty, fill up, access is coherent")
+	{
+		REQUIRE(queue_.empty());
+		REQUIRE(queue_.size() == 0);
+		queue_.push_back(dummy{ 1, 'a' });
+		REQUIRE(queue_.size() == 1);
+		REQUIRE(!queue_.empty());
+		REQUIRE(queue_.front().data1 == 1);
+		REQUIRE(queue_.front().data2 == 'a');
+		queue_.pop_front();
+		REQUIRE(queue_.empty());
+		REQUIRE(queue_.size() == 0);
+
+		queue_.push_back(dummy{ 2, 'b' });
+		REQUIRE(!queue_.empty());
+		REQUIRE(queue_.size() == 1);
+		REQUIRE(queue_.front().data1 == 2);
+		REQUIRE(queue_.front().data2 == 'b');
+	}
 }

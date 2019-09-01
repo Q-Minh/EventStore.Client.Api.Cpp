@@ -66,10 +66,11 @@ public:
 		this->connection()->async_send(std::move(package));
 	}
 
-	template <class EventAppearedHandler>
+	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	bool on_package_received(
 		detail::tcp::tcp_package_view view, 
-		EventAppearedHandler& event_appeared
+		EventAppearedHandler& event_appeared,
+		SubscriptionDroppedHandler& // not used in volatile subscription
 	)
 	{
 		if (view.command() == detail::tcp::tcp_command::subscription_confirmation)
@@ -77,6 +78,7 @@ public:
 			message::SubscriptionConfirmation response;
 			response.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 			this->set_last_commit_position(response.last_commit_position());
+			this->set_is_subscribed(true);
 			if (response.has_last_event_number())
 				this->set_last_event_number(response.last_event_number());
 			

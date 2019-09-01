@@ -13,7 +13,7 @@ template <class ConnectionType, class AllEventsSliceReadHandler>
 void async_read_all_events(
 	std::shared_ptr<ConnectionType> const& connection,
 	read_direction direction,
-	position& from_position,
+	position const& from_position,
 	int max_count,
 	bool resolve_link_tos,
 	AllEventsSliceReadHandler&& handler
