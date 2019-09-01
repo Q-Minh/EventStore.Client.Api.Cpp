@@ -34,8 +34,7 @@ public:
 	) : base_type(connection, key, stream),
 		current_event_number_(from_event_number),
 		settings_(settings),
-		event_buffer_(),
-		catching_up_(false)
+		event_buffer_()
 	{}
 
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
@@ -138,6 +137,11 @@ public:
 		return false; // will delegate handling to the base class
 	}
 
+	void shutdown()
+	{
+		event_buffer_.clear();
+	}
+
 private:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void do_async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
@@ -226,7 +230,6 @@ private:
 	std::int64_t current_event_number_;
 	subscription_settings settings_;
 	buffer::buffer_queue<resolved_event, std::deque, 25> event_buffer_;
-	bool catching_up_;
 };
 
 } // subscription

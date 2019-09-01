@@ -19,6 +19,14 @@
 namespace es {
 namespace subscription {
 
+template <class Subscription, typename = void>
+struct has_shutdown : std::false_type {};
+
+template <class Subscription>
+struct has_shutdown<Subscription, 
+	std::void_t<decltype(std::declval<Subscription>().shutdown())>> 
+	: std::true_type {};
+
 template <class ConnectionType, class Derived>
 class subscription_base
 {
@@ -44,6 +52,8 @@ public:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
+		this->unlock_handle_guard();
+
 		connection_->subscriptions_map_.register_op(
 			key_,
 			[event_appeared = std::forward<EventAppearedHandler>(event_appeared), 
@@ -173,6 +183,16 @@ protected:
 	{
 		this->set_is_subscribed(false);
 		this->lock_handle_guard();
+		// uncomment following block to verify if derived class' shutdown() method
+		// is actually called
+		/*static_assert(
+			has_shutdown<Derived>::value,
+			"subscriptions derived from subscription base must have a shutdown() method"
+		);*/
+		if constexpr (has_shutdown<Derived>::value)
+		{
+			static_cast<Derived*>(this)->shutdown();
+		}
 
 		asio::post(
 			connection_->get_io_context(),

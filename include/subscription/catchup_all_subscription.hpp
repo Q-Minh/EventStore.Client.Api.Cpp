@@ -128,6 +128,11 @@ public:
 		return false; // will delegate handling to the base class
 	}
 
+	void shutdown()
+	{
+		event_buffer_.clear();
+	}
+
 private:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void do_async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
@@ -219,6 +224,7 @@ private:
 			}
 		});
 	}
+
 private:
 	position current_position_;
 	subscription_settings settings_;
