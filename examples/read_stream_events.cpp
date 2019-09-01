@@ -117,10 +117,14 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	auto handler = [tcp_connection = tcp_connection, &stream](std::error_code ec, std::optional<es::stream_events_slice> result)
+	auto begin = std::chrono::high_resolution_clock::now();
+
+	auto handler = [tcp_connection = tcp_connection, &stream, begin = begin](std::error_code ec, std::optional<es::stream_events_slice> result)
 	{
 		if (!ec)
 		{
+			auto end = std::chrono::high_resolution_clock::now();
+
 			auto& value = result.value();
 			ES_INFO("stream={}, from-event-number={}, next-event-number={}, last-event-number={}, is-end-of-stream={}, read-direction={}",
 				value.stream(),
@@ -143,7 +147,7 @@ int main(int argc, char** argv)
 				);
 			}
 
-			ES_INFO("got {} events", value.events().size());
+			ES_INFO("got {} events in {} ms", value.events().size(), ES_MILLISECONDS(end - begin));
 			return;
 		}
 		else
