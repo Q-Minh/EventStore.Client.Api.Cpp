@@ -18,7 +18,7 @@ list(APPEND _sources
 	"src/messages.pb.cc"
 )
 
-add_library(${PROJECT_NAME} INTERFACE "")
+add_library(${PROJECT_NAME} INTERFACE)
 target_sources(${PROJECT_NAME} 
 INTERFACE
     # ${_sources}
@@ -141,10 +141,15 @@ function(build_executable executable entrypoint _sources)
     PRIVATE
         ${PROJECT_NAME}
     )
+	target_compile_definitions(${executable}
+	PRIVATE
+		_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
+	)
 endfunction()
 
 # build_executable(connect-to-es-01 "examples/connect-to-es-01.cpp" "${_sources}")
 build_executable(append-to-stream "examples/append_to_stream.cpp" "${_sources}")
+build_executable(append-to-stream-batch "examples/append_to_stream_batch.cpp" "${_sources}")
 build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}")
 build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")
 build_executable(read-stream-events "examples/read_stream_events.cpp" "${_sources}")
@@ -181,6 +186,7 @@ PRIVATE
 target_compile_definitions(unit-tests
 PRIVATE
     BOOST_UUID_FORCE_AUTO_LINK
+	_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
 )
 target_link_libraries(unit-tests 
 PRIVATE 

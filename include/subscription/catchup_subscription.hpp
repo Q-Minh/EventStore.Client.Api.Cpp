@@ -34,8 +34,7 @@ public:
 	) : base_type(connection, key, stream),
 		current_event_number_(from_event_number),
 		settings_(settings),
-		event_buffer_(),
-		catching_up_(false)
+		event_buffer_()
 	{}
 
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
@@ -123,19 +122,21 @@ public:
 			// this would mean we have missed events
 			if (this->last_event_number().value() > current_event_number_) return true;
 			
-			int i = 0;
-			while (!event_buffer_.empty() && i < settings_.read_batch_size())
+			// if the queue was empty before, start the chain of emptying the buffer
+			if (event_buffer_.size() == 1)
 			{
-				event_appeared(event_buffer_.front());
-				event_buffer_.pop_front();
-				++current_event_number_;
-				++i;
+				this->read_subscription_events(event_appeared);
 			}
 		
 			return true;
 		}
 
 		return false; // will delegate handling to the base class
+	}
+
+	void shutdown()
+	{
+		event_buffer_.clear();
 	}
 
 private:
@@ -212,6 +213,16 @@ private:
 				{
 					this->catch_up_missed_events(mutable_count, event_appeared, dropped);
 				}
+				else
+				{
+					asio::post(
+						this->connection()->get_io_context(),
+						[this, &event_appeared]()
+					{
+						// start reading buffered events
+						this->read_subscription_events(event_appeared);
+					});
+				}
 
 				return;
 			}
@@ -222,11 +233,33 @@ private:
 			}
 		});
 	}
+
+	template <class EventAppearedHandler>
+	void read_subscription_events(EventAppearedHandler& event_appeared)
+	{
+		int i = 0;
+		while (!event_buffer_.empty() && i < settings_.max_live_queue_size())
+		{
+			event_appeared(event_buffer_.front());
+			event_buffer_.pop_front();
+			++current_event_number_;
+			++i;
+		}
+
+		if (!event_buffer_.empty())
+		{
+			asio::post(
+				this->connection()->get_io_context(),
+				[this, &event_appeared]()
+			{
+				read_subscription_events(event_appeared);
+			});
+		}
+	}
 private:
 	std::int64_t current_event_number_;
 	subscription_settings settings_;
 	buffer::buffer_queue<resolved_event, std::deque, 25> event_buffer_;
-	bool catching_up_;
 };
 
 } // subscription

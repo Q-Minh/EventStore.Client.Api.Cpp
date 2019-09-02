@@ -4,7 +4,8 @@
 #include <asio/ip/basic_resolver.hpp>
 #include <asio/ip/address.hpp>
 
-#include "read_stream_event.hpp"
+#include "event_data.hpp"
+#include "append_to_stream.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
 #include "tcp/discovery_service.hpp"
@@ -13,11 +14,13 @@ int main(int argc, char** argv)
 {
 	GOOGLE_PROTOBUF_VERSION;
 
-	if (argc != 8)
+	if (argc != 7)
 	{
-		ES_ERROR("expected 7 arguments, got {}", argc - 1);
-		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> <event-number> [trace | debug | info | warn | error | critical | off]");
-		ES_ERROR("example: ./read-stream-event 127.0.0.1 1113 admin changeit test-stream 0 info");
+		ES_ERROR("expected 6 arguments, got {}", argc - 1);
+		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <num-events> [trace | debug | info | warn | error | critical | off]");
+		ES_ERROR("example: ./append-to-stream 127.0.0.1 1113 admin changeit 1000 info");
+		ES_ERROR("tool will write the following data to event store");
+		ES_ERROR("stream={}\n\tevent-type={}\n\tis-json={}\n\tdata={}\n\tmetadata={}", "test-stream", "Test.Type", true, "{ \"test\": \"data\"}", "test metadata");
 		return 0;
 	}
 
@@ -26,9 +29,8 @@ int main(int argc, char** argv)
 	int port = std::stoi(argv[2]);
 	std::string username = argv[3];
 	std::string password = argv[4];
-	std::string stream = argv[5];
-	std::int64_t event_no = std::stoll(argv[6]);
-	std::string_view lvl = argv[7];
+	int num_events = std::stoi(argv[5]);
+	std::string_view lvl = argv[6];
 	ES_DEFAULT_LOG_LEVEL(lvl);
 
 	asio::io_context ioc;
@@ -118,41 +120,39 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	// read one stream event, the given completion handler will
+	std::vector<es::event_data> events;
+	events.reserve(num_events);
+
+	ES_INFO("sending events to es");
+	for (int i = 0; i < num_events; ++i)
+	{
+		es::event_data event{ es::guid(), "Test.Type", true, "{ \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\", \"test\": \"data\"}", "test metadata" };
+		events.push_back(event);
+	}
+	std::string stream_name = "test-stream";
+
+	// append one stream event, the given completion handler will
 	// be called once a server response with respect to this 
 	// operation has been received or has timed out
-	bool resolve_links_tos = true;
-	es::async_read_stream_event(
+	auto begin = std::chrono::high_resolution_clock::now();
+
+	es::async_append_to_stream(
 		tcp_connection,
-		stream,
-		event_no,
-		resolve_links_tos,
-		[tcp_connection = tcp_connection, &stream, event_no = event_no](std::error_code ec, std::optional<es::event_read_result> result)
+		stream_name,
+		std::move(events),
+		[tcp_connection = tcp_connection, stream_name, begin = begin](std::error_code ec, std::optional<es::write_result> result)
 	{
 		if (!ec)
 		{
-			auto& read_result = result.value();
-			ES_INFO("read event {} from stream {}", read_result.event_number(), read_result.stream());
-
-			if (!read_result.event().has_value()) return;
-			auto& event = read_result.event().value();
-
-			ES_INFO("stream-id={}\n\tresolved={}\n\tevent-number={}\n\tevent-id={}\n\tis-json={}\n\tevent-type={}\n\tcreated={}\n\tcreated_epoch={}\n\tmetadata={}\n\tdata={}",
-				event.event().value().stream_id(),
-				event.is_resolved(),
-				event.event().value().event_number(),
-				es::to_string(event.event().value().event_id()),
-				event.event().value().is_json(),
-				event.event().value().event_type(),
-				event.event().value().created(),
-				event.event().value().created_epoch(),
-				event.event().value().metadata(),
-				event.event().value().content()
-			);
+			auto end = std::chrono::high_resolution_clock::now();
+			ES_INFO("successfully appended to stream {}, next expected version={}, in {} ms", 
+				stream_name, 
+				result.value().next_expected_version(), 
+				ES_MILLISECONDS(end - begin));
 		}
 		else
 		{
-			ES_ERROR("error trying to read event {} from stream {}, {}", event_no, stream, ec.message());
+			ES_ERROR("error appending to stream : {}", ec.message());
 			return;
 		}
 	}

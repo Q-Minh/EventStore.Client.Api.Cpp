@@ -19,6 +19,14 @@
 namespace es {
 namespace subscription {
 
+template <class Subscription, typename = void>
+struct has_shutdown : std::false_type {};
+
+template <class Subscription>
+struct has_shutdown<Subscription, 
+	std::void_t<decltype(std::declval<Subscription>().shutdown())>> 
+	: std::true_type {};
+
 template <class ConnectionType, class Derived>
 class subscription_base
 {
@@ -44,6 +52,8 @@ public:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
+		this->unlock_handle_guard();
+
 		connection_->subscriptions_map_.register_op(
 			key_,
 			[event_appeared = std::forward<EventAppearedHandler>(event_appeared), 
@@ -56,6 +66,7 @@ public:
 			if (ec)
 			{
 				this->unsubscribe(ec, std::move(dropped));
+				return;
 			}
 			// let derived class handler package first, and if he can't handle it, 
 			// it will return false to delegate it to the base (this class)
@@ -153,11 +164,36 @@ public:
 		);
 	}
 
+	void unsubscribe()
+	{
+		std::error_code ec = make_error_code(subscription_errors::unsubscribed);
+		connection_->subscriptions_map_[key_](ec, {});
+	}
+
+	std::string const& stream() const { return stream_; }
+	std::optional<std::int64_t> const& last_event_number() const { return last_event_number_; }
+	std::optional<std::int64_t> const& last_commit_position() const { return last_commit_position_; }
+	bool is_subscribed() const { return subscribed_; }
+	std::shared_ptr<connection_type> const& connection() const { return connection_; }
+
+protected:
+	// derived classes will deal with these setters
+
 	template <class SubscriptionDroppedHandler>
 	void unsubscribe(std::error_code ec, SubscriptionDroppedHandler&& dropped)
 	{
 		this->set_is_subscribed(false);
 		this->lock_handle_guard();
+		// uncomment following block to verify if derived class' shutdown() method
+		// is actually called
+		/*static_assert(
+			has_shutdown<Derived>::value,
+			"subscriptions derived from subscription base must have a shutdown() method"
+		);*/
+		if constexpr (has_shutdown<Derived>::value)
+		{
+			static_cast<Derived*>(this)->shutdown();
+		}
 
 		asio::post(
 			connection_->get_io_context(),
@@ -170,18 +206,10 @@ public:
 		);
 	}
 
-	std::string const& stream() const { return stream_; }
-	std::optional<std::int64_t> const& last_event_number() const { return last_event_number_; }
-	std::optional<std::int64_t> const& last_commit_position() const { return last_commit_position_; }
-	bool is_subscribed() const { return subscribed_; }
-
-protected:
-	// derived classes will deal with these setters
 	void set_last_event_number(std::int64_t number) { last_event_number_ = number; }
 	void set_last_commit_position(std::int64_t position) { last_commit_position_ = position; }
 	void set_is_subscribed(bool subscribed) { subscribed_ = subscribed; }
 
-	std::shared_ptr<connection_type> const& connection() const { return connection_; }
 	op_key_type const& correlation_id() const { return key_; }
 	void lock_handle_guard() { handle_guard_ = true; }
 	void unlock_handle_guard() { handle_guard_ = false; }

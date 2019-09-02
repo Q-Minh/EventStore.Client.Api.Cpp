@@ -113,19 +113,20 @@ public:
 			// we are currently catching up
 			if (position_to_catch_up_to_ > current_position_) return true;
 
-			int i = 0;
-			while (!event_buffer_.empty() && i < settings_.read_batch_size())
+			if (event_buffer_.size() == 1)
 			{
-				current_position_ = event_buffer_.front().original_position().value();
-				event_appeared(event_buffer_.front());
-				event_buffer_.pop_front();
-				++i;
+				read_subscription_events(event_appeared);
 			}
 
 			return true;
 		}
 
 		return false; // will delegate handling to the base class
+	}
+
+	void shutdown()
+	{
+		event_buffer_.clear();
 	}
 
 private:
@@ -209,6 +210,10 @@ private:
 				{
 					this->catch_up_missed_events(count, event_appeared, dropped);
 				}
+				else
+				{
+					this->read_subscription_events(event_appeared);
+				}
 
 				return;
 			}
@@ -218,6 +223,29 @@ private:
 				return;
 			}
 		});
+	}
+
+	template <class EventAppearedHandler>
+	void read_subscription_events(EventAppearedHandler& event_appeared)
+	{
+		int i = 0;
+		while (!event_buffer_.empty() && i < settings_.max_live_queue_size())
+		{
+			current_position_ = event_buffer_.front().original_position().value();
+			event_appeared(event_buffer_.front());
+			event_buffer_.pop_front();
+			++i;
+		}
+
+		if (!event_buffer_.empty())
+		{
+			asio::post(
+				this->connection()->get_io_context(),
+				[this, &event_appeared]()
+			{
+				read_subscription_events(event_appeared);
+			});
+		}
 	}
 private:
 	position current_position_;

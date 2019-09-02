@@ -12,11 +12,11 @@ int main(int argc, char** argv)
 {
 	GOOGLE_PROTOBUF_VERSION;
 
-	if (argc != 8)
+	if (argc != 9)
 	{
-		ES_ERROR("expected 7 arguments, got {}", argc - 1);
-		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <from-prepare-position> <from-commit-position> [trace | debug | info | warn | error | critical | off]");
-		ES_ERROR("example: ./catchup-all-subscription 127.0.0.1 1113 admin changeit 0 info");
+		ES_ERROR("expected 8 arguments, got {}", argc - 1);
+		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <from-prepare-position> <from-commit-position> <read-batch-size> [trace | debug | info | warn | error | critical | off]");
+		ES_ERROR("example: ./catchup-all-subscription 127.0.0.1 1113 admin changeit 0 0 500 info");
 		return 0;
 	}
 
@@ -27,7 +27,8 @@ int main(int argc, char** argv)
 	std::string password = argv[4];
 	std::int64_t from_prepare_position = std::stoll(argv[5]);
 	std::int64_t from_commit_position = std::stoll(argv[6]);
-	std::string_view lvl = argv[7];
+	int read_batch_size = std::stoi(argv[7]);
+	std::string_view lvl = argv[8];
 	ES_DEFAULT_LOG_LEVEL(lvl);
 
 	asio::io_context ioc;
@@ -112,7 +113,7 @@ int main(int argc, char** argv)
 	auto guid = es::guid();
 	auto sub_settings = es::subscription_settings_builder().
 		resolve_link_tos(true).
-		with_read_batch_size(2).
+		with_read_batch_size(read_batch_size).
 		with_subscription_name("my-all-subscription").
 		build();
 
@@ -176,6 +177,10 @@ int main(int argc, char** argv)
 		ES_ERROR("subscription dropped : {}", ec.message());
 	}
 	);
+
+	//ioc.run_for(std::chrono::seconds(5));
+
+	//subscription->unsubscribe();
 
 	ioc.run();
 
