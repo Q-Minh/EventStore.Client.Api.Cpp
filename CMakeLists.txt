@@ -186,6 +186,7 @@ PRIVATE
 target_compile_definitions(unit-tests
 PRIVATE
     BOOST_UUID_FORCE_AUTO_LINK
+	_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
 )
 target_link_libraries(unit-tests 
 PRIVATE 

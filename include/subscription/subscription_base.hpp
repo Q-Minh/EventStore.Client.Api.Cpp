@@ -174,6 +174,7 @@ public:
 	std::optional<std::int64_t> const& last_event_number() const { return last_event_number_; }
 	std::optional<std::int64_t> const& last_commit_position() const { return last_commit_position_; }
 	bool is_subscribed() const { return subscribed_; }
+	std::shared_ptr<connection_type> const& connection() const { return connection_; }
 
 protected:
 	// derived classes will deal with these setters
@@ -209,7 +210,6 @@ protected:
 	void set_last_commit_position(std::int64_t position) { last_commit_position_ = position; }
 	void set_is_subscribed(bool subscribed) { subscribed_ = subscribed; }
 
-	std::shared_ptr<connection_type> const& connection() const { return connection_; }
 	op_key_type const& correlation_id() const { return key_; }
 	void lock_handle_guard() { handle_guard_ = true; }
 	void unlock_handle_guard() { handle_guard_ = false; }

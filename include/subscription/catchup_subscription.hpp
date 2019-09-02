@@ -122,13 +122,10 @@ public:
 			// this would mean we have missed events
 			if (this->last_event_number().value() > current_event_number_) return true;
 			
-			int i = 0;
-			while (!event_buffer_.empty() && i < settings_.read_batch_size())
+			// if the queue was empty before, start the chain of emptying the buffer
+			if (event_buffer_.size() == 1)
 			{
-				event_appeared(event_buffer_.front());
-				event_buffer_.pop_front();
-				++current_event_number_;
-				++i;
+				this->read_subscription_events(event_appeared);
 			}
 		
 			return true;
@@ -216,6 +213,16 @@ private:
 				{
 					this->catch_up_missed_events(mutable_count, event_appeared, dropped);
 				}
+				else
+				{
+					asio::post(
+						this->connection()->get_io_context(),
+						[this, &event_appeared]()
+					{
+						// start reading buffered events
+						this->read_subscription_events(event_appeared);
+					});
+				}
 
 				return;
 			}
@@ -225,6 +232,29 @@ private:
 				return;
 			}
 		});
+	}
+
+	template <class EventAppearedHandler>
+	void read_subscription_events(EventAppearedHandler& event_appeared)
+	{
+		int i = 0;
+		while (!event_buffer_.empty() && i < settings_.max_live_queue_size())
+		{
+			event_appeared(event_buffer_.front());
+			event_buffer_.pop_front();
+			++current_event_number_;
+			++i;
+		}
+
+		if (!event_buffer_.empty())
+		{
+			asio::post(
+				this->connection()->get_io_context(),
+				[this, &event_appeared]()
+			{
+				read_subscription_events(event_appeared);
+			});
+		}
 	}
 private:
 	std::int64_t current_event_number_;
