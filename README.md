@@ -56,6 +56,9 @@ cmake --build . --target append-to-stream --config Release # or Debug, RelWithDe
 cmake --build . --target append-to-stream
 ```
 
+All the examples have a provided CMake target named like the example's cpp source file, with dashes '-' replacing the source file name's underscores '_'.
+For example, there is a "persistent_subscriptions.cpp" example source file in the examples subdirectory, and its corresponding CMake target is "persistent-subscriptions". 
+
 ### Running the examples
 
 For usage information, execute the examples without arguments. For example, after building the `append-to-stream` examples, run:
@@ -97,11 +100,11 @@ where:
 - operations on stream metadata (without serialization) :heavy_check_mark:
 - volatile subscriptions :heavy_check_mark:
 - catchup subscriptions :heavy_check_mark:
-- persistent subscriptions (IN PROGRESS)
+- persistent subscriptions :heavy_check_mark:
 - transactions :heavy_check_mark:
 - connection configuration (retries, node preference, ssl, queue size, etc)
 - user management
-- cluster node discovery
+- cluster node discovery (IN PROGRESS)
 - projections
 
 ### Others

@@ -27,10 +27,13 @@ INTERFACE
     # top-level
 	include/all_events_slice.hpp
 	include/append_to_stream.hpp
+	include/catchup_subscription_settings.hpp
 	include/commit_transaction.hpp
 	include/conditional_append_to_stream.hpp
 	include/connection_result.hpp
     include/connection_settings.hpp
+	include/create_persistent_subscription.hpp
+	include/delete_persistent_subscription.hpp
 	include/delete_stream.hpp
 	include/delete_stream_result.hpp
     include/duration_conversions.hpp
@@ -40,6 +43,7 @@ INTERFACE
     include/guid.hpp
     include/logger.hpp
     include/operations_map.hpp
+	include/persistent_subscription_settings.hpp
 	include/position.hpp
 	include/read_all_events.hpp
 	include/read_all_events_backward.hpp
@@ -55,10 +59,10 @@ INTERFACE
 	include/start_transaction.hpp
 	include/stream_events_slice.hpp
 	include/stream_metadata_result_raw.hpp
-	include/subscription_settings.hpp
 	include/transaction.hpp
 	include/transactional_write.hpp
-  include/version.hpp
+	include/update_persistent_subscription.hpp
+	include/version.hpp
 	include/write_result.hpp
 
 	# buffer
@@ -88,6 +92,7 @@ INTERFACE
 	# subscription
 	include/subscription/catchup_all_subscription.hpp
 	include/subscription/catchup_subscription.hpp
+	include/subscription/persistent_subscription.hpp
 	include/subscription/subscription_base.hpp
 	include/subscription/volatile_subscription.hpp
   
@@ -159,6 +164,8 @@ build_executable(stream-metadata "examples/stream_metadata.cpp" "${_sources}")
 build_executable(volatile-subscription "examples/volatile_subscription.cpp" "${_sources}")
 build_executable(catchup-subscription "examples/catchup_subscription.cpp" "${_sources}")
 build_executable(catchup-all-subscription "examples/catchup_all_subscription.cpp" "${_sources}")
+build_executable(persistent-subscription "examples/persistent_subscription.cpp" "${_sources}")
+build_executable(persistent-subscription-operations "examples/persistent_subscription_operations.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")
@@ -179,8 +186,6 @@ PRIVATE
 )
 target_include_directories(unit-tests
 PRIVATE
-    include/
-    ${Boost_INCLUDE_DIRS}
 	"tests/"
 )
 target_compile_definitions(unit-tests
@@ -190,6 +195,7 @@ PRIVATE
 )
 target_link_libraries(unit-tests 
 PRIVATE 
+	${PROJECT_NAME}
     Catch2::Catch2
     asio
     asio::asio
