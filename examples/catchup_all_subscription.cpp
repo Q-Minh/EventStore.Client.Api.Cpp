@@ -111,7 +111,7 @@ int main(int argc, char** argv)
 	}
 
 	auto guid = es::guid();
-	auto sub_settings = es::subscription_settings_builder().
+	auto sub_settings = es::catchup_subscription_settings_builder().
 		resolve_link_tos(true).
 		with_read_batch_size(read_batch_size).
 		with_subscription_name("my-all-subscription").

@@ -12,7 +12,6 @@
 
 #include "logger.hpp"
 #include "guid.hpp"
-#include "subscription_settings.hpp"
 #include "error/error.hpp"
 #include "tcp/tcp_package.hpp"
 
@@ -52,6 +51,12 @@ public:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
+		static_assert(
+			std::is_invocable_v<SubscriptionDroppedHandler, std::error_code, child_type const&> || 
+			std::is_invocable_v<SubscriptionDroppedHandler, std::error_code, child_type&>,
+			"SubscriptionDroppedHandler requirements not met, must have signature R(std::error_code, Derived const&)"
+		);
+
 		this->unlock_handle_guard();
 
 		connection_->subscriptions_map_.register_op(
@@ -176,8 +181,12 @@ public:
 	bool is_subscribed() const { return subscribed_; }
 	std::shared_ptr<connection_type> const& connection() const { return connection_; }
 
-protected:
 	// derived classes will deal with these setters
+protected:
+	void unsubscribe(std::error_code ec)
+	{
+		connection_->subscriptions_map_[key_](ec, {});
+	}
 
 	template <class SubscriptionDroppedHandler>
 	void unsubscribe(std::error_code ec, SubscriptionDroppedHandler&& dropped)
@@ -195,15 +204,45 @@ protected:
 			static_cast<Derived*>(this)->shutdown();
 		}
 
-		asio::post(
-			connection_->get_io_context(),
-			[dropped = std::move(dropped),
-			ec = ec, key = key_, this]()
+		if (ec == subscription_errors::unsubscribed)
 		{
-			connection_->subscriptions_map_.erase(key); // remove subscription from map
-			dropped(ec, *static_cast<child_type*>(this)); // notify server error
+			message::UnsubscribeFromStream unsubscribe;
+			auto serialized = unsubscribe.SerializeAsString();
+
+			detail::tcp::tcp_package<> package{
+				detail::tcp::tcp_command::unsubscribe_from_stream,
+				detail::tcp::tcp_flags::none,
+				key_,
+				(std::byte*)serialized.data(),
+				serialized.size()
+			};
+
+			connection_->async_send(
+				std::move(package),
+				[dropped = std::move(dropped), this, ec = ec](std::error_code err, detail::tcp::tcp_package_view view)
+			{
+				if (!err)
+				{
+					connection_->subscriptions_map_.erase(key_); // remove subscription from map
+					dropped(ec, *static_cast<child_type*>(this)); // notify server error
+				}
+				else
+				{
+					this->unsubscribe(err, std::move(dropped));
+				}
+			});
 		}
-		);
+		else
+		{
+			asio::post(
+				connection_->get_io_context(),
+				[dropped = std::move(dropped),
+				ec = ec, this]()
+			{
+				connection_->subscriptions_map_.erase(key_); // remove subscription from map
+				dropped(ec, *static_cast<child_type*>(this)); // notify server error
+			});
+		}
 	}
 
 	void set_last_event_number(std::int64_t number) { last_event_number_ = number; }

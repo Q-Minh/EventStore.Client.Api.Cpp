@@ -8,7 +8,7 @@
 #include "read_all_events.hpp"
 #include "read_stream_events.hpp"
 #include "subscription_base.hpp"
-#include "subscription_settings.hpp"
+#include "catchup_subscription_settings.hpp"
 #include "buffer/buffer_queue.hpp"
 
 namespace es {
@@ -30,7 +30,7 @@ public:
 		op_key_type const& key,
 		std::string_view stream,
 		std::int64_t from_event_number,
-		subscription_settings const& settings
+		catchup_subscription_settings const& settings
 	) : base_type(connection, key, stream),
 		current_event_number_(from_event_number),
 		settings_(settings),
@@ -40,6 +40,11 @@ public:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
+		static_assert(
+			std::is_invocable_v<EventAppearedHandler, resolved_event&>,
+			"EventAppearedHandler requirements not met, must have signature R(es::resolved_event&)"
+		);
+
 		catch_up_events(
 			current_event_number_,
 			settings_.read_batch_size(),
@@ -258,7 +263,7 @@ private:
 	}
 private:
 	std::int64_t current_event_number_;
-	subscription_settings settings_;
+	catchup_subscription_settings settings_;
 	buffer::buffer_queue<resolved_event, std::deque, 25> event_buffer_;
 };
 
@@ -270,7 +275,7 @@ auto make_catchup_subscription(
 	typename ConnectionType::operations_map_type::key_type const& key,
 	std::string_view stream,
 	std::int64_t from_event_number,
-	subscription_settings const& settings) -> std::shared_ptr<subscription::catchup_subscription<ConnectionType>>
+	catchup_subscription_settings const& settings) -> std::shared_ptr<subscription::catchup_subscription<ConnectionType>>
 {
 	return std::make_shared<subscription::catchup_subscription<ConnectionType>>(connection, key, stream, from_event_number, settings);
 }

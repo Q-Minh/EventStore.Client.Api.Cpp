@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef ES_CATCHUP_SUBSCRIPTION_HPP
-#define ES_CATCHUP_SUBSCRIPTION_HPP
+#ifndef ES_CATCHUP_ALL_SUBSCRIPTION_HPP
+#define ES_CATCHUP_ALL_SUBSCRIPTION_HPP
 
 #include <deque>
 
@@ -9,7 +9,7 @@
 #include "read_all_events.hpp"
 #include "read_stream_events.hpp"
 #include "subscription_base.hpp"
-#include "subscription_settings.hpp"
+#include "catchup_subscription_settings.hpp"
 #include "buffer/buffer_queue.hpp"
 
 namespace es {
@@ -30,7 +30,7 @@ public:
 		std::shared_ptr<connection_type> const& connection,
 		op_key_type const& key,
 		position from_position,
-		subscription_settings const& settings
+		catchup_subscription_settings const& settings
 	) : base_type(connection, key, ""),
 		current_position_(from_position),
 		settings_(settings),
@@ -40,6 +40,11 @@ public:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
+		static_assert(
+			std::is_invocable_v<EventAppearedHandler, resolved_event&>,
+			"EventAppearedHandler requirements not met, must have signature R(es::resolved_event&)"
+		);
+
 		catch_up_events(
 			current_position_,
 			settings_.read_batch_size(),
@@ -249,7 +254,7 @@ private:
 	}
 private:
 	position current_position_;
-	subscription_settings settings_;
+	catchup_subscription_settings settings_;
 	buffer::buffer_queue<resolved_event, std::deque, 25> event_buffer_;
 	position position_to_catch_up_to_;
 };
@@ -261,11 +266,11 @@ auto make_catchup_all_subscription(
 	std::shared_ptr<ConnectionType> const& connection,
 	typename ConnectionType::operations_map_type::key_type const& key,
 	position from_position,
-	subscription_settings const& settings) -> std::shared_ptr<subscription::catchup_all_subscription<ConnectionType>>
+	catchup_subscription_settings const& settings) -> std::shared_ptr<subscription::catchup_all_subscription<ConnectionType>>
 {
 	return std::make_shared<subscription::catchup_all_subscription<ConnectionType>>(connection, key, from_position, settings);
 }
 
 } // es
 
-#endif // ES_CATCHUP_SUBSCRIPTION_HPP
+#endif // ES_CATCHUP_ALL_SUBSCRIPTION_HPP

@@ -50,7 +50,12 @@ enum class subscription_errors
 	unknown = 4,
 	not_authenticated = 5,
 	subscription_request_not_sent = 6,
-	bad_subscription_confirmation = 7
+	bad_subscription_confirmation = 7,
+	persistent_subscription_deleted = 8,
+	subscriber_max_count_reached = 9,
+	persistent_subscription_already_exists = 10,
+	persistent_subscription_fail = 11,
+	persistent_subscription_does_not_exist = 12
 };
 
 namespace error {
@@ -175,6 +180,16 @@ struct subscription_category : public std::error_category
 			return "an error occurred before sending the subscription request";
 		case subscription_errors::bad_subscription_confirmation:
 			return "subscription confirmation did not have last_event_number or last_commit_position";
+		case subscription_errors::persistent_subscription_deleted:
+			return "persistent subscription was deleted";
+		case subscription_errors::subscriber_max_count_reached:
+			return "the maximum number of subscriber for this subscription group was reached";
+		case subscription_errors::persistent_subscription_already_exists:
+			return "could not create the persistent subscription since it already exists";
+		case subscription_errors::persistent_subscription_fail:
+			return "the operation on the persistent subscription failed";
+		case subscription_errors::persistent_subscription_does_not_exist:
+			return "the persistent subscription did not exist";
 		default:
 			return "unknown error";
 		}

@@ -32,6 +32,11 @@ public:
 	template <class EventAppearedHandler, class SubscriptionDroppedHandler>
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
+		static_assert(
+			std::is_invocable_v<EventAppearedHandler, resolved_event&>,
+			"EventAppearedHandler requirements not met, must have signature R(es::resolved_event&)"
+		);
+
 		message::SubscribeToStream request;
 		request.set_event_stream_id(this->stream());
 		request.set_resolve_link_tos(resolve_link_tos_);
