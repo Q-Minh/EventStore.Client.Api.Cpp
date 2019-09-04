@@ -248,10 +248,8 @@ public:
 	char* data() { return (char*)package_; }
 	std::size_t size() const { return length_ + 4; }
 	
-	// implicit conversion
-	operator tcp_package_view() const { return tcp_package_view(package_, length_ + 4); }
 	// explicit conversion
-	explicit operator tcp_package_view*() const { return tcp_package_view(package_, length_ + 4); }
+	explicit operator tcp_package_view() const { return tcp_package_view(package_, length_ + 4); }
 
 	~tcp_package()
 	{

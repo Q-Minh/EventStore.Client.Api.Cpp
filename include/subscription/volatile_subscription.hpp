@@ -33,8 +33,8 @@ public:
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
 		static_assert(
-			std::is_invocable_v<EventAppearedHandler, resolved_event&>,
-			"EventAppearedHandler requirements not met, must have signature R(es::resolved_event&)"
+			std::is_invocable_v<EventAppearedHandler, resolved_event const&>,
+			"EventAppearedHandler requirements not met, must have signature R(es::resolved_event const&)"
 		);
 
 		message::SubscribeToStream request;

@@ -112,7 +112,7 @@ int main(int argc, char** argv)
 		auto subscription = es::make_volatile_all_subscription(tcp_connection, guid);
 		ES_INFO("creating volatile subscription to stream={}, subscription-id={}", stream, es::to_string(guid));
 		subscription->async_start(
-			[self = subscription](es::resolved_event& event)
+			[self = subscription](es::resolved_event const& event)
 		{
 			ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
 		},
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 		auto subscription = es::make_volatile_subscription(tcp_connection, guid, stream);
 		ES_INFO("creating volatile subscription to stream={}, subscription-id={}", stream, es::to_string(guid));
 		subscription->async_start(
-			[self = subscription](es::resolved_event& event)
+			[self = subscription](es::resolved_event const& event)
 		{
 			ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
 		},

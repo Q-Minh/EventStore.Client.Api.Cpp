@@ -73,7 +73,7 @@ public:
 	self_type& with_live_buffer_size_of(int size) { settings_.live_buffer_size_ = size; return *this; }
 	self_type& with_read_batch_size_of(int size) { settings_.read_batch_size_ = size; return *this; }
 	self_type& with_history_buffer_size_of(int size) { settings_.history_buffer_size_ = size; return *this; }
-	self_type& start_from_current() { settings_.start_from_ = -1; }
+	self_type& start_from_current() { settings_.start_from_ = -1; return *this; }
 	self_type& with_max_subscriber_count_of(int count) { settings_.max_subscriber_count_ = count; return *this; }
 	self_type& with_named_consumer_strategy(std::string_view strategy) { settings_.named_consumer_strategy_ = strategy; return *this; }
 	persistent_subscription_settings build() { return std::move(settings_); }

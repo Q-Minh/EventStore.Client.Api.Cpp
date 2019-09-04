@@ -23,7 +23,7 @@ TEST_CASE("operations_map has random access by guid to type erased operations", 
 		auto key1 = es::guid();
 		int test1 = 0;
 		auto token1 = [&test1](asio::error_code, package_view_type) { test1 = 10; };
-		operation_type op1(token1);
+		operation_type op1(std::move(token1));
 		ops_manager.register_op(key1, std::move(op1));
 		auto key2 = es::guid();
 		int test2 = 0;

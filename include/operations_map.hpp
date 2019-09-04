@@ -22,7 +22,7 @@ public:
 	using package_view_type = detail::tcp::tcp_package_view;
 
 	template <typename CompletionHandler>
-	operation(CompletionHandler&& token, Allocator& alloc = Allocator())
+	operation(CompletionHandler&& token, Allocator const& alloc = Allocator())
 		: op_(nullptr), alloc_(alloc)
 	{
 		static_assert(

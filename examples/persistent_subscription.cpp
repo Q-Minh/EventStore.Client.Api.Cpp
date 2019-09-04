@@ -113,7 +113,7 @@ int main(int argc, char** argv)
 	auto subscription = es::make_persistent_subscription(tcp_connection, guid, stream, group, allowed_in_flight_messages);
 	ES_INFO("creating persistent subscription to stream={}, subscription-id={}, group={}", stream, es::to_string(guid), group);
 	subscription->async_start(
-		[self = subscription](es::resolved_event& event, std::int32_t retry_count)
+		[self = subscription](es::resolved_event const& event, std::int32_t retry_count)
 	{
 		ES_INFO("event received, stream={}, number={}, retry-count={}", event.original_stream_id(), event.original_event_number(), retry_count);
 	},

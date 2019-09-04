@@ -114,7 +114,7 @@ public:
 		};
 
 		tcp::operations::connect_op<self_type, discovery_service_type, std::decay_t<decltype(identification_package_received_handler)>>
-			op{ shared_from_this(), std::move(identification_package_received_handler) };
+			op{ this->shared_from_this(), std::move(identification_package_received_handler) };
 
 		op.initiate();
 	}
@@ -148,7 +148,7 @@ public:
 		this->async_send(std::move(package));
 
 		tcp::operations::operation_op<self_type, waitable_timer_type, PackageReceivedHandler>
-			op{ shared_from_this(), std::move(handler), std::move(guid) };
+			op{ this->shared_from_this(), std::move(handler), std::move(guid) };
 
 		op.initiate();
 	}
@@ -222,7 +222,7 @@ private:
 
 	void async_start_receive()
 	{
-		tcp::operations::read_tcp_package_op<self_type, dynamic_buffer_type> read_op{ shared_from_this(), buffer_ };
+		tcp::operations::read_tcp_package_op<self_type, dynamic_buffer_type> read_op{ this->shared_from_this(), buffer_ };
 		read_op.initiate(
 			[this](asio::error_code& ec, std::size_t frame_size)
 		{
