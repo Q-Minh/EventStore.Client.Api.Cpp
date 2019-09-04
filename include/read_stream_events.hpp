@@ -25,7 +25,8 @@ void async_read_stream_events(
 		"EventsSliceReadHandler requirements not met, must have signature R(std::error_code, std::optional<es::stream_events_slice>)"
 		);
 
-	message::ReadStreamEvents request;
+	static message::ReadStreamEvents request;
+	request.Clear();
 	request.set_event_stream_id(stream);
 	request.set_from_event_number(from_event_number);
 	request.set_max_count(max_count);
@@ -85,7 +86,7 @@ void async_read_stream_events(
 			return;
 		}
 
-		message::ReadStreamEventsCompleted response;
+		static message::ReadStreamEventsCompleted response;
 		response.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 
 		switch (response.result())

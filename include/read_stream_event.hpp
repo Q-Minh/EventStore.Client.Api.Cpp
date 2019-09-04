@@ -29,7 +29,8 @@ void async_read_stream_event(
 		"ReadResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::event_read_result>)"
 	);
 
-	message::ReadEvent request;
+	static message::ReadEvent request;
+	request.Clear();
 	request.set_event_stream_id(stream);
 	request.set_event_number(event_number);
 	request.set_resolve_link_tos(resolveLinkTos);
@@ -78,7 +79,7 @@ void async_read_stream_event(
 			return;
 		}
 
-		message::ReadEventCompleted response;
+		static message::ReadEventCompleted response;
 		response.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 		
 		event_read_status status;

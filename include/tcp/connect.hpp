@@ -244,7 +244,7 @@ public:
 		auto& endpoint_discoverer = asio::use_service<discovery_service_type>(conn->get_io_context());
 
 		discover_node_endpoints_handler<connection_type, discovery_service_type, handler_type> handler{ conn, std::move(handler_) };
-		endpoint_discoverer.async_discover_node_endpoints(std::move(handler));
+		endpoint_discoverer.async_discover_node_endpoints(*conn, std::move(handler));
 		ES_DEBUG("connect_op::initiate : initiated endpoints discovery");
 	}
 

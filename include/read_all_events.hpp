@@ -24,7 +24,8 @@ void async_read_all_events(
 		"AllEventsSliceReadHandler requirements not met, must have signature R(std::error_code, std::optional<es::all_events_slice>)"
 	);
 
-	message::ReadAllEvents request;
+	static message::ReadAllEvents request;
+	request.Clear();
 	request.set_commit_position(from_position.commit_position());
 	request.set_prepare_position(from_position.prepare_position());
 	request.set_max_count(max_count);
@@ -84,7 +85,7 @@ void async_read_all_events(
 			return;
 		}
 
-		message::ReadAllEventsCompleted response;
+		static message::ReadAllEventsCompleted response;
 		response.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 
 		switch (response.result())

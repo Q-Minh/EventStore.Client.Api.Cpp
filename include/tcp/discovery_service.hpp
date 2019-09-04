@@ -41,15 +41,15 @@ public:
 		ssl_(ssl)
 	{}
 
-	template <class Func>
-	void async_discover_node_endpoints(Func&& f)
+	template <class Connection, class Func>
+	void async_discover_node_endpoints(Connection& connection, Func&& f)
 	{
 		static_assert(
 			std::is_invocable_v<Func, asio::error_code, endpoint_type>,
 			"template argument to Func must have signature void(asio::error_code, endpoint_type)"
 			);
 
-		asio::post(reinterpret_cast<asio::io_context&>(this->context()),
+		asio::post(connection.get_io_context(),
 			[this, f = std::move(f)]() mutable
 		{
 			asio::error_code ec;
@@ -57,8 +57,8 @@ public:
 		});
 	}
 
-	/*endpoint_type& node_endpoint() { return endpoint_; }
-	endpoint_type& node_endpoint_secure() { return secure_endpoint_; }*/
+	endpoint_type& node_endpoint() { return endpoint_; }
+	endpoint_type& node_endpoint_secure() { return secure_endpoint_; }
 	endpoint_type const& node_endpoint() const { return endpoint_; }
 	endpoint_type const& node_endpoint_secure() const { return secure_endpoint_; }
 

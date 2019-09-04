@@ -91,7 +91,7 @@ public:
 		}
 		if (view.command() == detail::tcp::tcp_command::stream_event_appeared)
 		{
-			message::StreamEventAppeared message;
+			static message::StreamEventAppeared message;
 			message.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 			event_appeared(resolved_event(*message.mutable_event()));
 
