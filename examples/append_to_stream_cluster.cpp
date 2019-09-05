@@ -20,7 +20,7 @@ int main(int argc, char** argv)
 		ES_ERROR("expected 9 arguments, got {}", argc - 1);
 		ES_ERROR("usage: <executable> <username> <password> <gossip-seed1-ip> <port> <gossip-seed2-ip> <port> <gossip-seed3-ip> <port> [trace | debug | info | warn | error | critical | off]");
 		ES_ERROR("example: ./append-to-stream-cluster admin changeit 127.0.0.1 3112 127.0.0.1 4112 127.0.0.1 5112 info");
-		ES_ERROR("tool will write the following data to event store");
+		ES_ERROR("tool will write the following data to event store connecting to one of the three cluster node's specified as arguments");
 		ES_ERROR("stream={}\n\tevent-type={}\n\tis-json={}\n\tdata={}\n\tmetadata={}", "test-stream", "Test.Type", true, "{ \"test\": \"data\"}", "test metadata");
 		return 0;
 	}

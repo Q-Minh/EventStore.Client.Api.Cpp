@@ -60,6 +60,26 @@ public:
 	{}
 
 	template <class Connection, class Func>
+	void async_discover_node_endpoints(Connection& connection, Func&& f)
+	{
+		static_assert(
+			std::is_invocable_v<Func, boost::system::error_code, endpoint_type>,
+			"template argument to Func must have signature void(boost::system::error_code, endpoint_type)"
+			);
+
+		context_ = std::addressof(connection.get_io_context());
+		auto timer = std::make_shared<boost::asio::steady_timer>(*context_);
+		// start the discovery cycle
+		this->perform_discovery(connection, std::forward<Func>(f), timer, 1);
+	}
+
+	~cluster_discovery_service()
+	{
+		shutdown();
+	}
+
+private:
+	template <class Connection, class Func>
 	bool do_discover_node_endpoints(Connection& connection, Func&& f, int attempt)
 	{
 		if (attempt <= settings_.max_discover_attempts())
@@ -99,31 +119,13 @@ public:
 					[this, timer = timer, &connection, f = std::move(f), attempt = attempt + 1 /*here is where we increment the attempt, as in the for loop version of the .net client*/]
 				(boost::system::error_code ec)
 				{
-					if (!ec)
-					{
-						this->perform_discovery(connection, std::move(f), timer, attempt);
-					}
-					else
-					{
-						// do something
-					}
+					// we are not checking the error code, because an async_wait's handler is called
+					// either on an operation_aborted or if the wait complete successfully, 
+					// but we never cancel the timer in this scenario
+					this->perform_discovery(connection, std::move(f), timer, attempt);
 				});
 			}
 		});
-	}
-
-	template <class Connection, class Func>
-	void async_discover_node_endpoints(Connection& connection, Func&& f)
-	{
-		static_assert(
-			std::is_invocable_v<Func, boost::system::error_code, endpoint_type>,
-			"template argument to Func must have signature void(boost::system::error_code, endpoint_type)"
-			);
-
-		context_ = std::addressof(connection.get_io_context());
-		auto timer = std::make_shared<boost::asio::steady_timer>(*context_);
-		// start the discovery cycle
-		this->perform_discovery(connection, std::forward<Func>(f), timer, 1);
 	}
 
 	std::optional<node_endpoints_type> discover_endpoints()
@@ -158,6 +160,18 @@ public:
 		else
 		{
 			// perform dns resolution and create gossip seeds from results
+			boost::asio::ip::tcp::resolver resolver{ *context_ };
+			boost::system::error_code ec;
+			auto it = resolver.resolve(settings_.cluster_dns(), ec);
+			if (ec) return {};
+			std::transform(
+				it,
+				decltype(it)(),
+				std::back_inserter(endpoints),
+				[](decltype(*it) result)
+			{
+				return tcp::gossip_seed(result.endpoint());
+			});
 		}
 
 		std::random_device device;
@@ -213,12 +227,6 @@ public:
 	auto try_get_gossip_from(tcp::gossip_seed const& seed) 
 		-> std::optional<message::cluster_info>
 	{
-		/*std::ostringstream oss{};
-		oss << "http://"
-			<< seed.endpoint()
-			<< "/gossip?format=json";
-		std::string url = oss.str();*/
-
 		namespace beast = boost::beast;
 		beast::tcp_stream stream{ *context_ };
 
@@ -323,10 +331,6 @@ public:
 		return std::make_optional(endpoints);
 	}
 
-	~cluster_discovery_service()
-	{
-		shutdown();
-	}
 private:
 	virtual void shutdown() noexcept override
 	{}

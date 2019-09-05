@@ -2,11 +2,11 @@
 
 ### Introduction
 
-An [Asio (standalone version)](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html) based C++ client library for [EventStore](https://eventstore.org/).
+A [Boost.Asio and Boost.Beast](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html) based C++ client library for [EventStore](https://eventstore.org/).
 
 ### Prerequisites
 
-- a C++ 17 compiler (subject to change for C++11 or C++14)
+- a C++ 17 compiler
 - cmake >= 3.14 (or build by hand)
 - protoc (protobuf compiler) if you want to regenerate the message implementation
 
@@ -15,10 +15,10 @@ An [Asio (standalone version)](https://www.boost.org/doc/libs/1_71_0/doc/html/bo
 - [protobuf](https://developers.google.com/protocol-buffers/)
 - [Boost.Asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
 - [Boost.System (header-only)](https://www.boost.org/doc/libs/1_68_0/libs/system/doc/index.html)
-- [spdlog](https://github.com/gabime/spdlog) (for library maintainers)
 - [Boost.Beast](https://www.boost.org/doc/libs/1_71_0/libs/beast/doc/html/index.html)
 - [Boost.Uuid](https://www.boost.org/doc/libs/1_71_0/libs/uuid/doc/index.html)
 - [Boost.ContainerHash](https://www.boost.org/doc/libs/1_71_0/doc/html/hash.html)
+- [spdlog](https://github.com/gabime/spdlog)
 - [JSON for Modern C++](https://github.com/nlohmann/json)
 - [Catch2](https://github.com/catchorg/Catch2) (for tests only)
 
@@ -108,9 +108,9 @@ where:
 - catchup subscriptions :heavy_check_mark:
 - persistent subscriptions :heavy_check_mark:
 - transactions :heavy_check_mark:
-- connection configuration (retries, node preference, ssl, queue size, etc)
-- user management
-- cluster node discovery (IN PROGRESS)
+- connection configuration (retries, node preference, ssl, queue size, etc) (IN PROGRESS)
+- user management (IN PROGRESS)
+- cluster node discovery :heavy_check_mark:
 - projections
 
 ### Others
