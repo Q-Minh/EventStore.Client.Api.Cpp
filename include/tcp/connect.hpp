@@ -6,7 +6,7 @@
 #include <memory>
 #include <functional>
 
-#include <asio/execution_context.hpp>
+#include <boost/asio/execution_context.hpp>
 
 #include "logger.hpp"
 
@@ -39,7 +39,7 @@ public:
 	) : connection_(connection), handler_(std::move(handler))
 	{}
 
-	void operator()(asio::error_code ec)
+	void operator()(boost::system::error_code ec)
 	{
 		// please set error code...
 		if (connection_.expired()) return;
@@ -97,7 +97,7 @@ public:
 
 	authentication_handler(authentication_handler<ConnectionType, PackageReceivedHandler>&& other) = default;
 
-	void operator()(asio::error_code ec, detail::tcp::tcp_package_view view)
+	void operator()(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		// signal error
 		if (connection_.expired()) return;
@@ -194,7 +194,7 @@ public:
 	) : connection_(connection), handler_(std::move(handler))
 	{}
 
-	void operator()(asio::error_code ec, endpoint_type endpoint)
+	void operator()(boost::system::error_code ec, endpoint_type endpoint)
 	{
 		// set error code....
 		if (connection_.expired()) return;
@@ -241,7 +241,7 @@ public:
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
 
-		auto& endpoint_discoverer = asio::use_service<discovery_service_type>(conn->get_io_context());
+		auto& endpoint_discoverer = boost::asio::use_service<discovery_service_type>(conn->get_io_context());
 
 		discover_node_endpoints_handler<connection_type, discovery_service_type, handler_type> handler{ conn, std::move(handler_) };
 		endpoint_discoverer.async_discover_node_endpoints(*conn, std::move(handler));

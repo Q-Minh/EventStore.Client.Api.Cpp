@@ -5,37 +5,37 @@
 
 #include <type_traits>
 
-#include <asio/io_context.hpp>
-#include <asio/execution_context.hpp>
-#include <asio/ip/tcp.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/execution_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 namespace es {
 namespace tcp {
 namespace services {
 
 class discovery_service
-	: public asio::execution_context::service
+	: public boost::asio::execution_context::service
 {
 public:
-	using endpoint_type = asio::ip::tcp::endpoint;
+	using endpoint_type = boost::asio::ip::tcp::endpoint;
 	using key_type = discovery_service;
-	inline static asio::execution_context::id id;
+	inline static boost::asio::execution_context::id id;
 
 	explicit discovery_service(
-		asio::execution_context& ioc
-	) : asio::execution_context::service(ioc),
+		boost::asio::execution_context& ioc
+	) : boost::asio::execution_context::service(ioc),
 		endpoint_(),
 		secure_endpoint_(),
 		ssl_()
 	{}
 
 	explicit discovery_service(
-		asio::execution_context& ioc,
-		asio::ip::tcp::endpoint const& endpoint,
-		asio::ip::tcp::endpoint const& secure_endpoint,
+		boost::asio::execution_context& ioc,
+		boost::asio::ip::tcp::endpoint const& endpoint,
+		boost::asio::ip::tcp::endpoint const& secure_endpoint,
 		bool ssl
 	)
-		: asio::execution_context::service(ioc),
+		: boost::asio::execution_context::service(ioc),
 		endpoint_(endpoint),
 		secure_endpoint_(secure_endpoint),
 		ssl_(ssl)
@@ -45,14 +45,14 @@ public:
 	void async_discover_node_endpoints(Connection& connection, Func&& f)
 	{
 		static_assert(
-			std::is_invocable_v<Func, asio::error_code, endpoint_type>,
-			"template argument to Func must have signature void(asio::error_code, endpoint_type)"
+			std::is_invocable_v<Func, boost::system::error_code, endpoint_type>,
+			"template argument to Func must have signature void(boost::system::error_code, endpoint_type)"
 			);
 
-		asio::post(connection.get_io_context(),
+		boost::asio::post(connection.get_io_context(),
 			[this, f = std::move(f)]() mutable
 		{
-			asio::error_code ec;
+			boost::system::error_code ec;
 			f(ec, ssl_ ? this->node_endpoint_secure() : this->node_endpoint());
 		});
 	}

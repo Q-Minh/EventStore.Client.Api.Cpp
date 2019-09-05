@@ -20,8 +20,8 @@ void async_read_all_events(
 )
 {
 	static_assert(
-		std::is_invocable_v<AllEventsSliceReadHandler, std::error_code, std::optional<all_events_slice>>,
-		"AllEventsSliceReadHandler requirements not met, must have signature R(std::error_code, std::optional<es::all_events_slice>)"
+		std::is_invocable_v<AllEventsSliceReadHandler, boost::system::error_code, std::optional<all_events_slice>>,
+		"AllEventsSliceReadHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::all_events_slice>)"
 	);
 
 	static message::ReadAllEvents request;
@@ -63,7 +63,7 @@ void async_read_all_events(
 	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler), direction = direction]
-	(std::error_code ec, detail::tcp::tcp_package_view view)
+	(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec)
 		{

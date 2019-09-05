@@ -21,8 +21,8 @@ void async_start_transaction(
 )
 {
 	static_assert(
-		std::is_invocable_v<TransactionStartedHandler, std::error_code, std::optional<transaction<ConnectionType>>>,
-		"TransactionStartedHandler requirements not met, must have signature R(std::error_code, std::optional<es::transaction<ConnectionType>>)"
+		std::is_invocable_v<TransactionStartedHandler, boost::system::error_code, std::optional<transaction<ConnectionType>>>,
+		"TransactionStartedHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::transaction<ConnectionType>>)"
 	);
 
 	message::TransactionStart request;
@@ -61,7 +61,7 @@ void async_start_transaction(
 	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler), stream = stream, connection = connection]
-		(std::error_code ec, detail::tcp::tcp_package_view view)
+		(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 		{
 			if (!ec && view.command() != detail::tcp::tcp_command::transaction_start_completed)
 			{

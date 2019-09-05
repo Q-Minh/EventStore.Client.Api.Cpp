@@ -20,8 +20,8 @@ void async_transactional_write(
 )
 {
 	static_assert(
-		std::is_invocable_v<TransactionalWriteHandler, std::error_code>,
-		"TransactionalWriteHandler requirements not met, must have signature R(std::error_code)"
+		std::is_invocable_v<TransactionalWriteHandler, boost::system::error_code>,
+		"TransactionalWriteHandler requirements not met, must have signature R(boost::system::error_code)"
 	);
 
 	message::TransactionWrite request;
@@ -85,7 +85,7 @@ void async_transactional_write(
 	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler), connection = connection]
-		(std::error_code ec, detail::tcp::tcp_package_view view)
+		(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 		{
 			if (!ec && view.command() != detail::tcp::tcp_command::transaction_write_completed)
 			{

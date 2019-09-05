@@ -50,7 +50,7 @@ public:
 			settings_.read_batch_size(),
 			[event_appeared = std::forward<EventAppearedHandler>(event_appeared),
 			dropped = std::forward<SubscriptionDroppedHandler>(dropped),
-			this](std::error_code ec, std::optional<stream_events_slice> result)
+			this](boost::system::error_code ec, std::optional<stream_events_slice> result)
 		{
 			if (!ec)
 			{
@@ -200,7 +200,7 @@ private:
 	void catch_up_missed_events(std::int64_t count, EventAppearedHandler& event_appeared, SubscriptionDroppedHandler& dropped)
 	{
 		this->catch_up_events(current_event_number_, count,
-			[&event_appeared, &dropped, count = count, this](std::error_code ec, std::optional<stream_events_slice> result)
+			[&event_appeared, &dropped, count = count, this](boost::system::error_code ec, std::optional<stream_events_slice> result)
 		{
 			if (!ec)
 			{
@@ -220,7 +220,7 @@ private:
 				}
 				else
 				{
-					asio::post(
+					boost::asio::post(
 						this->connection()->get_io_context(),
 						[this, &event_appeared]()
 					{
@@ -253,7 +253,7 @@ private:
 
 		if (!event_buffer_.empty())
 		{
-			asio::post(
+			boost::asio::post(
 				this->connection()->get_io_context(),
 				[this, &event_appeared]()
 			{

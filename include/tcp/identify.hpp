@@ -6,8 +6,8 @@
 #include <memory>
 #include <type_traits>
 
-#include <asio/error_code.hpp>
-#include <asio/basic_waitable_timer.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/basic_waitable_timer.hpp>
 
 #include "logger.hpp"
 #include "guid.hpp"
@@ -28,11 +28,11 @@ class identify_op
 public:
 	using connection_type = ConnectionType;
 	using clock_type = typename connection_type::clock_type;
-	using waitable_timer_type = asio::basic_waitable_timer<clock_type>;
+	using waitable_timer_type = boost::asio::basic_waitable_timer<clock_type>;
 
 	static_assert(
-		std::is_invocable_v<PackageReceivedHandler, asio::error_code, detail::tcp::tcp_package_view>,
-		"PackageReceivedHandler must have signature void(asio::error_code, es::internal::tcp::tcp_package_view"
+		std::is_invocable_v<PackageReceivedHandler, boost::system::error_code, detail::tcp::tcp_package_view>,
+		"PackageReceivedHandler must have signature void(boost::system::error_code, es::internal::tcp::tcp_package_view"
 	);
 
 	explicit identify_op(
@@ -86,7 +86,7 @@ public:
 			op_map.register_op(
 				info_.correlation_id(),
 				operation_type(
-					[handler = std::move(handler_), deadline = deadline_, authenticated=authenticated_, corr_id=info_.correlation_id()](asio::error_code ec, tcp_package_view view)
+					[handler = std::move(handler_), deadline = deadline_, authenticated=authenticated_, corr_id=info_.correlation_id()](boost::system::error_code ec, tcp_package_view view)
 			{
 				deadline->cancel();
 				if (!authenticated && !ec) ec = make_error_code(connection_errors::authentication_failed);
@@ -139,7 +139,7 @@ public:
 	}
 
 	// handle the timeout
-	void operator()(asio::error_code ec)
+	void operator()(boost::system::error_code ec)
 	{
 		// should set error code
 		if (connection_.expired()) return;
@@ -167,7 +167,7 @@ public:
 		
 		// if error code is operation aborted, it means the server received the response before timing out.
 		// else, there was an error
-		if (ec != asio::error::operation_aborted)
+		if (ec != boost::asio::error::operation_aborted)
 		{
 			op_map[info_.correlation_id()](ec, {});
 			return;

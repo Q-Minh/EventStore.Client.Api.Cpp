@@ -25,8 +25,8 @@ void async_read_stream_event(
 )
 {
 	static_assert(
-		std::is_invocable_v<EventReadResultHandler, std::error_code, std::optional<event_read_result>>,
-		"ReadResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::event_read_result>)"
+		std::is_invocable_v<EventReadResultHandler, boost::system::error_code, std::optional<event_read_result>>,
+		"ReadResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::event_read_result>)"
 	);
 
 	static message::ReadEvent request;
@@ -66,7 +66,7 @@ void async_read_stream_event(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler), stream = stream, event_number = event_number](std::error_code ec, detail::tcp::tcp_package_view view)
+		[handler = std::move(handler), stream = stream, event_number = event_number](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::read_event_completed)
 		{

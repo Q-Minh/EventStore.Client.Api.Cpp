@@ -3,7 +3,7 @@
 #ifndef ES_ERROR_HPP
 #define ES_ERROR_HPP
 
-#include <system_error>
+#include <boost/system/error_code.hpp>
 
 namespace es {
 
@@ -60,7 +60,7 @@ enum class subscription_errors
 
 namespace error {
 
-struct connection_category : public std::error_category
+struct connection_category : public boost::system::error_category
 {
 	const char* name() const noexcept override
 	{
@@ -97,7 +97,7 @@ struct connection_category : public std::error_category
 	}
 };
 
-struct communication_category : public std::error_category
+struct communication_category : public boost::system::error_category
 {
 	const char* name() const noexcept override
 	{
@@ -122,7 +122,7 @@ struct communication_category : public std::error_category
 	}
 };
 
-struct stream_category : public std::error_category
+struct stream_category : public boost::system::error_category
 {
 	const char* name() const noexcept override
 	{
@@ -155,7 +155,7 @@ struct stream_category : public std::error_category
 	}
 };
 
-struct subscription_category : public std::error_category
+struct subscription_category : public boost::system::error_category
 {
 	const char* name() const noexcept override
 	{
@@ -222,47 +222,61 @@ inline const subscription_category& get_subscription_category()
 
 } // error
 
-inline std::error_code make_error_code(es::connection_errors ec) noexcept
+inline boost::system::error_code make_error_code(es::connection_errors ec) noexcept
 {
-	return std::error_code{ static_cast<int>(ec), es::error::get_connection_category() };
+	return boost::system::error_code{ static_cast<int>(ec), es::error::get_connection_category() };
 }
 
-inline std::error_code make_error_code(es::communication_errors ec) noexcept
+inline boost::system::error_code make_error_code(es::communication_errors ec) noexcept
 {
-	return std::error_code{ static_cast<int>(ec), es::error::get_communication_category() };
+	return boost::system::error_code{ static_cast<int>(ec), es::error::get_communication_category() };
 }
 
-inline std::error_code make_error_code(es::stream_errors ec) noexcept
+inline boost::system::error_code make_error_code(es::stream_errors ec) noexcept
 {
-	return std::error_code{ static_cast<int>(ec), es::error::get_stream_category() };
+	return boost::system::error_code{ static_cast<int>(ec), es::error::get_stream_category() };
 }
 
-inline std::error_code make_error_code(es::subscription_errors ec) noexcept
+inline boost::system::error_code make_error_code(es::subscription_errors ec) noexcept
 {
-	return std::error_code{ static_cast<int>(ec), es::error::get_subscription_category() };
+	return boost::system::error_code{ static_cast<int>(ec), es::error::get_subscription_category() };
 }
 
-static const std::error_category& connection_category = error::get_connection_category();
-static const std::error_category& communication_category = error::get_communication_category();
-static const std::error_category& stream_category = error::get_stream_category();
-static const std::error_category& subscription_category = error::get_subscription_category();
+static const boost::system::error_category& connection_category = error::get_connection_category();
+static const boost::system::error_category& communication_category = error::get_communication_category();
+static const boost::system::error_category& stream_category = error::get_stream_category();
+static const boost::system::error_category& subscription_category = error::get_subscription_category();
 
 } // es
 
-namespace std {
+namespace boost {
+namespace system {
 
 template <>
-struct is_error_code_enum<es::connection_errors> : true_type {};
+struct is_error_code_enum<es::connection_errors>
+{
+	static constexpr bool value = true;
+};
 
 template <>
-struct is_error_code_enum<es::communication_errors> : true_type {};
+struct is_error_code_enum<es::communication_errors>
+{
+	static constexpr bool value = true;
+};
 
 template <>
-struct is_error_code_enum<es::stream_errors> : true_type {};
+struct is_error_code_enum<es::stream_errors>
+{
+	static constexpr bool value = true;
+};
 
 template <>
-struct is_error_code_enum<es::subscription_errors> : true_type {};
+struct is_error_code_enum<es::subscription_errors>
+{
+	static constexpr bool value = true;
+};
 
+} // system
 } // std
 
 #endif // ES_ERROR_HPP

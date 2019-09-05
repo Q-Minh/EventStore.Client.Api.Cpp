@@ -21,8 +21,8 @@ void async_read_stream_events(
 )
 {
 	static_assert(
-		std::is_invocable_v<EventsSliceReadHandler, std::error_code, std::optional<stream_events_slice>>,
-		"EventsSliceReadHandler requirements not met, must have signature R(std::error_code, std::optional<es::stream_events_slice>)"
+		std::is_invocable_v<EventsSliceReadHandler, boost::system::error_code, std::optional<stream_events_slice>>,
+		"EventsSliceReadHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::stream_events_slice>)"
 		);
 
 	static message::ReadStreamEvents request;
@@ -64,7 +64,7 @@ void async_read_stream_events(
 	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler), stream = stream, from_event_number = from_event_number, direction = direction]
-	(std::error_code ec, detail::tcp::tcp_package_view view)
+	(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec)
 		{

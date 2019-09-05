@@ -45,8 +45,8 @@ public:
 	self_type& with_gossip_seed_endpoints(GossipSeedOrEndpointIterator it, GossipSeedOrEndpointIterator end)
 	{
 		static_assert(std::is_same_v<std::decay_t<decltype(*it)>, tcp::gossip_seed> || 
-			std::is_same_v<std::decay_t<decltype(*it)>, asio::ip::tcp::endpoint>, 
-			"GossipSeedIterator must be dereferenceable to a tcp::gossip_seed& or to an asio::ip::tcp::endpoint&"
+			std::is_same_v<std::decay_t<decltype(*it)>, boost::asio::ip::tcp::endpoint>, 
+			"GossipSeedIterator must be dereferenceable to a tcp::gossip_seed& or to an boost::asio::ip::tcp::endpoint&"
 		);
 		settings_.gossip_seeds_.clear();
 
@@ -58,7 +58,7 @@ public:
 		{
 			std::transform(it, end, 
 				std::back_inserter(settings_.gossip_seeds_), 
-				[](asio::ip::tcp::endpoint const& ep) { return tcp::gossip_seed(ep); });
+				[](boost::asio::ip::tcp::endpoint const& ep) { return tcp::gossip_seed(ep); });
 		}
 		return *this;
 	}

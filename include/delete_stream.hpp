@@ -25,8 +25,8 @@ void async_delete_stream(
 )
 {
 	static_assert(
-		std::is_invocable_v<DeleteResultHandler, std::error_code, std::optional<delete_stream_result>>,
-		"DeleteResultHandler requirements not met, must have signature R(std::error_code, es::delete_stream_result)"
+		std::is_invocable_v<DeleteResultHandler, boost::system::error_code, std::optional<delete_stream_result>>,
+		"DeleteResultHandler requirements not met, must have signature R(boost::system::error_code, es::delete_stream_result)"
 	);
 
 	message::DeleteStream request;
@@ -65,7 +65,7 @@ void async_delete_stream(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view)
+		[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::delete_stream_completed)
 		{

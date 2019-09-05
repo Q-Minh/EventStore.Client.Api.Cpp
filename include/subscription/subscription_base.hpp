@@ -6,7 +6,7 @@
 #include <memory>
 #include <optional>
 
-#include <asio/post.hpp>
+#include <boost/asio/post.hpp>
 
 #include "message/messages.pb.h"
 
@@ -52,9 +52,9 @@ public:
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
 		static_assert(
-			std::is_invocable_v<SubscriptionDroppedHandler, std::error_code, child_type const&> || 
-			std::is_invocable_v<SubscriptionDroppedHandler, std::error_code, child_type&>,
-			"SubscriptionDroppedHandler requirements not met, must have signature R(std::error_code, Derived const&)"
+			std::is_invocable_v<SubscriptionDroppedHandler, boost::system::error_code, child_type const&> || 
+			std::is_invocable_v<SubscriptionDroppedHandler, boost::system::error_code, child_type&>,
+			"SubscriptionDroppedHandler requirements not met, must have signature R(boost::system::error_code, Derived const&)"
 		);
 
 		this->unlock_handle_guard();
@@ -64,7 +64,7 @@ public:
 			[event_appeared = std::forward<EventAppearedHandler>(event_appeared), 
 			dropped = std::forward<SubscriptionDroppedHandler>(dropped),
 			key=key_, this]
-		(std::error_code ec, detail::tcp::tcp_package_view view)
+		(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 		{
 			if (handle_guard_) return;
 
@@ -171,7 +171,7 @@ public:
 
 	void unsubscribe()
 	{
-		std::error_code ec = make_error_code(subscription_errors::unsubscribed);
+		boost::system::error_code ec = make_error_code(subscription_errors::unsubscribed);
 		connection_->subscriptions_map_[key_](ec, {});
 	}
 
@@ -183,13 +183,13 @@ public:
 
 	// derived classes will deal with these setters
 protected:
-	void unsubscribe(std::error_code ec)
+	void unsubscribe(boost::system::error_code ec)
 	{
 		connection_->subscriptions_map_[key_](ec, {});
 	}
 
 	template <class SubscriptionDroppedHandler>
-	void unsubscribe(std::error_code ec, SubscriptionDroppedHandler&& dropped)
+	void unsubscribe(boost::system::error_code ec, SubscriptionDroppedHandler&& dropped)
 	{
 		this->set_is_subscribed(false);
 		this->lock_handle_guard();
@@ -219,7 +219,7 @@ protected:
 
 			connection_->async_send(
 				std::move(package),
-				[dropped = std::move(dropped), this, ec = ec](std::error_code err, detail::tcp::tcp_package_view view)
+				[dropped = std::move(dropped), this, ec = ec](boost::system::error_code err, detail::tcp::tcp_package_view view)
 			{
 				if (!err)
 				{
@@ -234,7 +234,7 @@ protected:
 		}
 		else
 		{
-			asio::post(
+			boost::asio::post(
 				connection_->get_io_context(),
 				[dropped = std::move(dropped),
 				ec = ec, this]()

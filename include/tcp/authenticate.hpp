@@ -6,8 +6,8 @@
 #include <memory>
 #include <type_traits>
 
-#include <asio/error_code.hpp>
-#include <asio/basic_waitable_timer.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/basic_waitable_timer.hpp>
 
 #include "logger.hpp"
 #include "guid.hpp"
@@ -26,7 +26,7 @@ class authenticate_op
 public:
 	using connection_type = ConnectionType;
 	using clock_type = typename connection_type::clock_type;
-	using waitable_timer_type = asio::basic_waitable_timer<clock_type>;
+	using waitable_timer_type = boost::asio::basic_waitable_timer<clock_type>;
 	using handler_type = PackageReceivedHandler;
 
 	explicit authenticate_op(
@@ -73,7 +73,7 @@ public:
 		op_map.register_op(
 			info_.correlation_id(),
 			operation_type(
-				[handler = std::move(handler_), deadline = deadline_](asio::error_code ec, tcp_package_view view) mutable
+				[handler = std::move(handler_), deadline = deadline_](boost::system::error_code ec, tcp_package_view view) mutable
 				{
 					deadline->cancel();
 					handler(ec, view);
@@ -86,7 +86,7 @@ public:
 		deadline_->async_wait(std::move(*this));
 	}
 
-	void operator()(asio::error_code ec)
+	void operator()(boost::system::error_code ec)
 	{
 		// should set error code
 		if (connection_.expired()) return;
@@ -105,7 +105,7 @@ public:
 		}
 
 		// if operation was aborted, it means response was received in time
-		if (ec != asio::error::operation_aborted)
+		if (ec != boost::asio::error::operation_aborted)
 		{
 			op_map[info_.correlation_id()](ec, {});
 			return;

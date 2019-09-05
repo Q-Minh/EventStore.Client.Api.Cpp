@@ -13,7 +13,8 @@ An [Asio (standalone version)](https://www.boost.org/doc/libs/1_71_0/doc/html/bo
 ### Dependencies
 
 - [protobuf](https://developers.google.com/protocol-buffers/)
-- [standalone asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
+- [Boost.Asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
+- [Boost.System (header-only)](https://www.boost.org/doc/libs/1_68_0/libs/system/doc/index.html)
 - [spdlog](https://github.com/gabime/spdlog) (for library maintainers)
 - [Boost.Beast](https://www.boost.org/doc/libs/1_71_0/libs/beast/doc/html/index.html)
 - [Boost.Uuid](https://www.boost.org/doc/libs/1_71_0/libs/uuid/doc/index.html)
@@ -119,11 +120,9 @@ where:
 - documentation
 - more examples
 
-*Note* : Only TCP communication is considered for the time being. EventStore also offers an HTTP api.
-
 ### Useful links
 
-- [asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
+- [boost.asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
 - [EventStore documentation](https://eventstore.org/docs/)
 - [EventStore .NET Client Api](https://github.com/EventStore/EventStore) (see ClientAPI and ClusterNode projects for debugging/development)
 - [protobuf for C++](https://developers.google.com/protocol-buffers/docs/cpptutorial)

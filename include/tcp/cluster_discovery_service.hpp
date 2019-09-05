@@ -17,9 +17,9 @@
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/status.hpp>
 
-#include <asio/io_context.hpp>
-#include <asio/execution_context.hpp>
-#include <asio/ip/tcp.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/execution_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -31,27 +31,27 @@ namespace tcp {
 namespace services {
 
 class cluster_discovery_service
-	: public asio::execution_context::service
+	: public boost::asio::execution_context::service
 {
 public:
-	using endpoint_type = asio::ip::tcp::endpoint;
+	using endpoint_type = boost::asio::ip::tcp::endpoint;
 	using key_type = cluster_discovery_service;
 	using node_endpoints_type = std::pair<endpoint_type, endpoint_type>;
-	inline static asio::execution_context::id id;
+	inline static boost::asio::execution_context::id id;
 
 	explicit cluster_discovery_service(
-		asio::execution_context& ioc
-	) : asio::execution_context::service(ioc),
+		boost::asio::execution_context& ioc
+	) : boost::asio::execution_context::service(ioc),
 		settings_(),
 		old_gossip_(),
 		context_(nullptr)
 	{}
 
 	explicit cluster_discovery_service(
-		asio::execution_context& ioc,
+		boost::asio::execution_context& ioc,
 		cluster_settings const& settings
 	)
-		: asio::execution_context::service(ioc),
+		: boost::asio::execution_context::service(ioc),
 		settings_(settings),
 		old_gossip_(),
 		context_(nullptr)
@@ -66,7 +66,7 @@ public:
 			if (endpoints.has_value())
 			{
 				// for now, we'll just use .first to use the normal tcp endpoint instead of the secure one (ssl not yet used)
-				f(std::error_code(), endpoints.value().first);
+				f(boost::system::error_code(), endpoints.value().first);
 				return true;
 			}
 			else
@@ -79,9 +79,9 @@ public:
 	}
 
 	template <class Connection, class Func>
-	void perform_discovery(Connection& connection, Func&& f, std::shared_ptr<asio::steady_timer> timer, int attempt)
+	void perform_discovery(Connection& connection, Func&& f, std::shared_ptr<boost::asio::steady_timer> timer, int attempt)
 	{
-		asio::post(
+		boost::asio::post(
 			connection.get_io_context(),
 			[this, timer = timer, &connection, f = std::move(f), attempt = attempt]()
 		{
@@ -90,7 +90,7 @@ public:
 				timer->expires_after(std::chrono::milliseconds(500));
 				timer->async_wait(
 					[this, timer = timer, &connection, f = std::move(f), attempt = attempt + 1 /*here is where we increment the attempt, as in the for loop version of the .net client*/]
-				(std::error_code ec)
+				(boost::system::error_code ec)
 				{
 					if (!ec)
 					{
@@ -109,12 +109,12 @@ public:
 	void async_discover_node_endpoints(Connection& connection, Func&& f)
 	{
 		static_assert(
-			std::is_invocable_v<Func, asio::error_code, endpoint_type>,
-			"template argument to Func must have signature void(asio::error_code, endpoint_type)"
+			std::is_invocable_v<Func, boost::system::error_code, endpoint_type>,
+			"template argument to Func must have signature void(boost::system::error_code, endpoint_type)"
 			);
 
 		context_ = std::addressof(connection.get_io_context());
-		auto timer = std::make_shared<asio::steady_timer>();
+		auto timer = std::make_shared<boost::asio::steady_timer>();
 		// start the discovery cycle
 		this->perform_discovery(connection, std::forward<Func>(f), timer, 1);
 	}
@@ -169,8 +169,8 @@ public:
 		int j = members.size();
 		for (int k = 0; k < members.size(); ++k)
 		{
-			auto endpoint = asio::ip::tcp::endpoint(
-				asio::ip::make_address_v4(members[k].external_http_ip()),
+			auto endpoint = boost::asio::ip::tcp::endpoint(
+				boost::asio::ip::make_address_v4(members[k].external_http_ip()),
 				members[k].external_http_port()
 			);
 
@@ -211,7 +211,7 @@ public:
 		namespace beast = boost::beast;
 		beast::tcp_stream stream{ *context_ };
 
-		std::error_code ec;
+		boost::system::error_code ec;
 		
 		//stream.connect(seed.endpoint());
 
@@ -280,12 +280,12 @@ public:
 
 		// else we've found our best node!
 		node_endpoints_type endpoints;
-		endpoints.first = asio::ip::tcp::endpoint(
-			asio::ip::make_address_v4(best_node.external_tcp_ip()), best_node.external_tcp_port()
+		endpoints.first = boost::asio::ip::tcp::endpoint(
+			boost::asio::ip::make_address_v4(best_node.external_tcp_ip()), best_node.external_tcp_port()
 		);
 
-		endpoints.second = asio::ip::tcp::endpoint(
-			asio::ip::make_address_v4(best_node.external_tcp_ip()), best_node.external_secure_tcp_port()
+		endpoints.second = boost::asio::ip::tcp::endpoint(
+			boost::asio::ip::make_address_v4(best_node.external_tcp_ip()), best_node.external_secure_tcp_port()
 		);
 
 		return std::make_optional(endpoints);
@@ -301,7 +301,7 @@ private:
 
 	cluster_settings settings_;
 	std::vector<message::member_info> old_gossip_;
-	asio::io_context* context_;
+	boost::asio::io_context* context_;
 };
 
 } // services

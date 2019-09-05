@@ -1,5 +1,5 @@
-#include <asio/ip/basic_resolver.hpp>
-#include <asio/ip/address.hpp>
+#include <boost/asio/ip/basic_resolver.hpp>
+#include <boost/asio/ip/address.hpp>
 
 #include "subscription/volatile_subscription.hpp"
 
@@ -27,10 +27,10 @@ int main(int argc, char** argv)
 	std::string_view lvl = argv[6];
 	ES_DEFAULT_LOG_LEVEL(lvl);
 
-	asio::io_context ioc;
+	boost::asio::io_context ioc;
 
-	asio::ip::tcp::endpoint endpoint;
-	endpoint.address(asio::ip::make_address_v4(ep));
+	boost::asio::ip::tcp::endpoint endpoint;
+	endpoint.address(boost::asio::ip::make_address_v4(ep));
 	endpoint.port(port);
 
 	// all operation will be authenticated by default
@@ -44,12 +44,12 @@ int main(int argc, char** argv)
 	// register the discovery service to enable the es tcp connection to discover endpoints to connect to
 	// for now, the discovery service doesn't do anything, since we haven't implemented cluster node discovery
 	using discovery_service_type = es::tcp::services::discovery_service;
-	auto& discovery_service = asio::make_service<discovery_service_type>(ioc, endpoint, asio::ip::tcp::endpoint(), false);
+	auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
 
 	// parameterize our tcp connection with steady timer, the basic discovery service and our type-erased operation
 	using connection_type =
 		es::connection::basic_tcp_connection<
-		asio::steady_timer,
+		boost::asio::steady_timer,
 		discovery_service_type,
 		es::operation<>
 		>;
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 		std::make_shared<connection_type>(
 			ioc,
 			connection_settings,
-			asio::dynamic_buffer(buffer_storage)
+			boost::asio::dynamic_buffer(buffer_storage)
 			);
 
 	// wait for connection before sending operations
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info
 	tcp_connection->async_connect(
-		[tcp_connection = tcp_connection, &is_connected, &notification](std::error_code ec, std::optional<es::connection_result> result)
+		[tcp_connection = tcp_connection, &is_connected, &notification](boost::system::error_code ec, std::optional<es::connection_result> result)
 	{
 		notification = true;
 
@@ -116,7 +116,7 @@ int main(int argc, char** argv)
 		{
 			ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
 		},
-			[self = subscription](std::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
+			[self = subscription](boost::system::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
 		{
 			ES_ERROR("subscription dropped : {}", ec.message());
 		}
@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 		{
 			ES_INFO("event received, {}", es::to_string(event.event().value().event_id()));
 		},
-			[self = subscription](std::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
+			[self = subscription](boost::system::error_code ec, es::subscription::volatile_subscription<connection_type> const& subscription)
 		{
 			ES_ERROR("subscription dropped : {}", ec.message());
 		}

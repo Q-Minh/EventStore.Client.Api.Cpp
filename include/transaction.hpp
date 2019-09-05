@@ -3,7 +3,7 @@
 #ifndef ES_TRANSACTION_HPP
 #define ES_TRANSACTION_HPP
 
-#include <asio/post.hpp>
+#include <boost/asio/post.hpp>
 
 #include "commit_transaction.hpp"
 #include "transactional_write.hpp"
@@ -30,14 +30,14 @@ public:
 	template <class WriteResultHandler>
 	void async_commit(WriteResultHandler&& handler)
 	{
-		std::error_code ec;
+		boost::system::error_code ec;
 		if (is_rolled_back_) ec = make_error_code(stream_errors::transaction_rolled_back);
 		if (is_committed_) ec = make_error_code(stream_errors::transaction_committed);
 		
 		if (ec)
 		{
 			// call the handler with the error
-			asio::post(
+			boost::asio::post(
 				connection_->get_io_context(),
 				[ec = ec, handler = std::move(handler)]() { handler(ec, {}); }
 			);
@@ -61,14 +61,14 @@ public:
 	template <class NewEventsSequence, class TransactionWriteHandler>
 	void async_write(NewEventsSequence&& events, TransactionWriteHandler&& handler)
 	{
-		std::error_code ec;
+		boost::system::error_code ec;
 		if (is_rolled_back_) ec = make_error_code(stream_errors::transaction_rolled_back);
 		if (is_committed_) ec = make_error_code(stream_errors::transaction_committed);
 
 		if (ec)
 		{
 			// call the handler with the error
-			asio::post(
+			boost::asio::post(
 				connection_->get_io_context(),
 				[ec = ec, handler = std::move(handler)]() { handler(ec); }
 			);
@@ -89,9 +89,9 @@ public:
 
 	// returns false if rollback failed (transaction is already committed)
 	// returns true if rollback successful
-	std::error_code rollback()
+	boost::system::error_code rollback()
 	{
-		std::error_code ec;
+		boost::system::error_code ec;
 		if (is_committed_)
 		{
 			ec = make_error_code(stream_errors::transaction_committed);

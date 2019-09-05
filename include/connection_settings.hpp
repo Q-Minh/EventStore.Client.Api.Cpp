@@ -118,7 +118,7 @@ public:
         settings_.gossip_seeds_.insert(settings_.gossip_seeds_.end(), seeds.cbegin(), seeds.cend());
         return *this;
     }
-	self_type& with_gossip_seeds(std::vector<asio::ip::tcp::endpoint> const& seeds)
+	self_type& with_gossip_seeds(std::vector<boost::asio::ip::tcp::endpoint> const& seeds)
 	{
 		settings_.gossip_seeds_.clear();
 		for (auto const& endpoint : seeds)

@@ -8,7 +8,7 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 	set (_additional_win_compile_defs "_WIN32_WINNT=0x0A00")
 endif()
 
-find_package(asio CONFIG REQUIRED)
+# find_package(asio CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(Boost REQUIRED)
@@ -126,15 +126,16 @@ INTERFACE
 )
 target_compile_definitions(${PROJECT_NAME}
 INTERFACE
-    BOOST_UUID_FORCE_AUTO_LINK
+	BOOST_UUID_FORCE_AUTO_LINK
+	BOOST_ERROR_CODE_HEADER_ONLY
 	${_additional_win_compile_defs}
 )
 get_target_property(_compile_defs ${PROJECT_NAME} INTERFACE_COMPILE_DEFINITIONS)
 message (STATUS "compile defs: ${_compile_defs}")
 target_link_libraries(${PROJECT_NAME}
 INTERFACE
-    asio
-    asio::asio
+    # asio
+    # boost::asio::asio
 	Boost::boost
     spdlog::spdlog
     protobuf::libprotobuf

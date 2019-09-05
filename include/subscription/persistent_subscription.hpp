@@ -137,7 +137,7 @@ public:
 			message::SubscriptionDropped message;
 			message.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 
-			std::error_code ec;
+			boost::system::error_code ec;
 			if (message.reason() == message::SubscriptionDropped_SubscriptionDropReason_AccessDenied)
 			{
 				ec = make_error_code(subscription_errors::access_denied);
