@@ -50,6 +50,7 @@ int main(int argc, char** argv)
 	auto connection_settings =
 		es::connection_settings_builder()
 		.with_default_user_credentials(credentials)
+		.require_master(false)
 		.build();
 
 	// register the discovery service to enable the es tcp connection to discover endpoints to connect to

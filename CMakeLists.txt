@@ -167,6 +167,7 @@ endfunction()
 
 # build_executable(connect-to-es-01 "examples/connect-to-es-01.cpp" "${_sources}")
 build_executable(append-to-stream "examples/append_to_stream.cpp" "${_sources}")
+build_executable(append-to-stream-cluster "examples/append_to_stream_cluster.cpp" "${_sources}")
 build_executable(append-to-stream-batch "examples/append_to_stream_batch.cpp" "${_sources}")
 build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}")
 build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")

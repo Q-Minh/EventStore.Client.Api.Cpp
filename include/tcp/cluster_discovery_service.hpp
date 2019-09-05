@@ -16,6 +16,7 @@
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/status.hpp>
+#include <boost/beast/core/buffers_to_string.hpp>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/execution_context.hpp>
@@ -24,6 +25,7 @@
 #include <nlohmann/json.hpp>
 
 #include "cluster_settings.hpp"
+#include "error/error.hpp"
 #include "message/cluster_messages.hpp"
 
 namespace es {
@@ -74,6 +76,11 @@ public:
 				return false;
 			}
 		}
+		else
+		{
+			f(make_error_code(connection_errors::endpoint_discovery), boost::asio::ip::tcp::endpoint());
+			return true;
+		}
 
 		return false;
 	}
@@ -83,7 +90,7 @@ public:
 	{
 		boost::asio::post(
 			connection.get_io_context(),
-			[this, timer = timer, &connection, f = std::move(f), attempt = attempt]()
+			[this, timer = timer, &connection, f = std::move(f), attempt = attempt]() mutable
 		{
 			if (!this->do_discover_node_endpoints(connection, std::move(f), attempt))
 			{
@@ -114,7 +121,7 @@ public:
 			);
 
 		context_ = std::addressof(connection.get_io_context());
-		auto timer = std::make_shared<boost::asio::steady_timer>();
+		auto timer = std::make_shared<boost::asio::steady_timer>(*context_);
 		// start the discovery cycle
 		this->perform_discovery(connection, std::forward<Func>(f), timer, 1);
 	}
@@ -137,6 +144,8 @@ public:
 				return best_node;
 			}
 		}
+
+		return {};
 	}
 
 	std::vector<tcp::gossip_seed> get_dns_candidates()
@@ -155,6 +164,8 @@ public:
 		std::mt19937 gen(device());
 
 		std::shuffle(endpoints.begin(), endpoints.end(), gen);
+
+		return endpoints;
 	}
 
 	std::vector<tcp::gossip_seed> get_candidates(std::vector<message::member_info> const& old_gossip)
@@ -166,7 +177,7 @@ public:
 	{
 		char* buffer = new char[members.size() * sizeof(tcp::gossip_seed)];
 		int i = -1;
-		int j = members.size();
+		int j = static_cast<int>(members.size());
 		for (int k = 0; k < members.size(); ++k)
 		{
 			auto endpoint = boost::asio::ip::tcp::endpoint(
@@ -202,20 +213,40 @@ public:
 	auto try_get_gossip_from(tcp::gossip_seed const& seed) 
 		-> std::optional<message::cluster_info>
 	{
-		std::ostringstream oss{};
+		/*std::ostringstream oss{};
 		oss << "http://"
 			<< seed.endpoint()
 			<< "/gossip?format=json";
-		std::string url = oss.str();
+		std::string url = oss.str();*/
 
 		namespace beast = boost::beast;
 		beast::tcp_stream stream{ *context_ };
 
 		boost::system::error_code ec;
-		
-		//stream.connect(seed.endpoint());
+		stream.connect(seed.endpoint(), ec);
+		if (ec) return {};
 
+		// get request with http version 1.1
+		beast::http::request<beast::http::string_body> req{ beast::http::verb::get, "/gossip?format=json", 11 };
+		req.set(beast::http::field::host, seed.endpoint().address().to_string());
 
+		beast::http::write(stream, req, ec);
+		if (ec) return {};
+
+		beast::flat_buffer buffer;
+		beast::http::response<beast::http::string_body> res;
+		beast::http::read(stream, buffer, res, ec);
+		if (ec) return {};
+
+		stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+		if (ec && ec != beast::errc::not_connected) return {};
+
+		if (res.result() != beast::http::status::ok) return {};
+
+		std::string body = res.body();
+		auto json = nlohmann::json::parse(body);
+		message::cluster_info info = json.get<message::cluster_info>();
+		return info;
 	}
 
 	auto try_determine_best_node(std::vector<message::member_info> const& members, node_preference preference)
@@ -230,13 +261,14 @@ public:
 
 		std::vector<message::member_info> nodes = members;
 		// remove if node is not alive or if it is in an unallowed state
-		nodes.erase(std::remove(nodes.begin(), nodes.end(), 
-			[](message::member_info const& info) 
-		{ 
+		auto it = std::remove_if(nodes.begin(), nodes.end(),
+			[](message::member_info const& info)
+		{
 			return !info.is_alive() ||
 				std::find_if(unallowed_states.begin(), unallowed_states.end(),
 					[&info](auto state) { return info.state() == state; }) != unallowed_states.end();
-		}));
+		});
+		if (it != nodes.end()) nodes.erase(it);
 
 		// sort in descending order by node state
 		std::sort(nodes.begin(), nodes.end(), 

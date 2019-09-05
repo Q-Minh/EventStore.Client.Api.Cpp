@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef ES_operations_map_HPP
-#define ES_operations_map_HPP
+#ifndef ES_OPERATIONS_MAP_HPP
+#define ES_OPERATIONS_MAP_HPP
 
 #include <memory>
 #include <unordered_map>
@@ -129,4 +129,4 @@ private:
 
 } // es
 
-#endif // ES_operations_map_HPP
+#endif // ES_OPERATIONS_MAP_HPP
