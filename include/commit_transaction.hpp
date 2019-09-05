@@ -20,8 +20,8 @@ void async_commit_transaction(
 )
 {
 	static_assert(
-		std::is_invocable_v<WriteResultHandler, std::error_code, std::optional<write_result>>,
-		"WriteResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::write_result>)"
+		std::is_invocable_v<WriteResultHandler, boost::system::error_code, std::optional<write_result>>,
+		"WriteResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::write_result>)"
 	);
 
 	message::TransactionCommit request;
@@ -59,7 +59,7 @@ void async_commit_transaction(
 	connection->async_send(
 		std::move(package),
 		[handler = std::move(handler), connection = connection]
-		(std::error_code ec, detail::tcp::tcp_package_view view)
+		(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 		{
 			if (!ec && view.command() != detail::tcp::tcp_command::transaction_commit_completed)
 			{

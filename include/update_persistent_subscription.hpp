@@ -30,8 +30,8 @@ void async_update_persistent_subscription(
 )
 {
 	static_assert(
-		std::is_invocable_v<UpdatePersistentSubscriptionResultHandler, std::error_code, std::string>,
-		"UpdatePersistentSubscriptionResultHandler requirements not met, must have signature R(std::error_code, std::string)"
+		std::is_invocable_v<UpdatePersistentSubscriptionResultHandler, boost::system::error_code, std::string>,
+		"UpdatePersistentSubscriptionResultHandler requirements not met, must have signature R(boost::system::error_code, std::string)"
 		);
 
 	message::UpdatePersistentSubscription request;
@@ -81,7 +81,7 @@ void async_update_persistent_subscription(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view)
+		[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::update_persistent_subscription_completed)
 		{

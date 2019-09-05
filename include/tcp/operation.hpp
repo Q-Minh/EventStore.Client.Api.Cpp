@@ -4,10 +4,10 @@
 #define ES_OPERATION_HPP
 
 #include <memory>
-#include <system_error>
+#include <boost/system/error_code.hpp>
 #include <type_traits>
 
-#include <asio/error.hpp>
+#include <boost/asio/error.hpp>
 
 #include "logger.hpp"
 #include "guid.hpp"
@@ -49,7 +49,7 @@ public:
 		operations_map_type& op_map_ = this->get_operations_map(*conn);
 		op_map_.register_op(
 			key_,
-			[handler = std::move(handler_), deadline = deadline_](std::error_code ec, detail::tcp::tcp_package_view view)
+			[handler = std::move(handler_), deadline = deadline_](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 		{
 			deadline->cancel();
 			handler(ec, view);
@@ -65,8 +65,8 @@ public:
 		deadline_->async_wait(std::move(*this));
 	}
 
-	// start using std::error_code instead of asio::error_code
-	void operator()(std::error_code ec)
+	// start using boost::system::error_code instead of boost::system::error_code
+	void operator()(boost::system::error_code ec)
 	{
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
@@ -84,7 +84,7 @@ public:
 			op_map_.erase(key_);
 		}
 		// response has been received in time, do nothing
-		else if (ec == asio::error::operation_aborted)
+		else if (ec == boost::asio::error::operation_aborted)
 		{
 			return;
 		}

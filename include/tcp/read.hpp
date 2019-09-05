@@ -6,7 +6,7 @@
 #include <memory>
 #include <cstddef>
 
-#include <asio/read.hpp>
+#include <boost/asio/read.hpp>
 
 #include "logger.hpp"
 #include "tcp/tcp_package.hpp"
@@ -29,7 +29,7 @@ public:
 	) : connection_(connection), buffer_(buffer), token_(std::forward<CompletionToken>(token))
 	{}
 
-	void operator()(asio::error_code ec, std::size_t bytes_read)
+	void operator()(boost::system::error_code ec, std::size_t bytes_read)
 	{
 		if (connection_.expired())
 		{
@@ -70,7 +70,7 @@ public:
 	) : connection_(connection), buffer_(buffer), token_(std::forward<CompletionToken>(token))
 	{}
 
-	void operator()(asio::error_code ec, std::size_t bytes_read)
+	void operator()(boost::system::error_code ec, std::size_t bytes_read)
 	{
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
@@ -90,9 +90,9 @@ public:
 			// commit length prefix
 			buffer_.commit(4);
 
-			asio::async_read(
+			boost::asio::async_read(
 				conn->socket(),
-				//asio::buffer(buffer_ + 4, length),
+				//boost::asio::buffer(buffer_ + 4, length),
 				buffer_.prepare(length),
 				read_message_handler<connection_type, dynamic_buffer_type, CompletionToken>(conn, buffer_, std::move(token_))
 			);
@@ -136,9 +136,9 @@ public:
 		// not sure if this is what we want, maybe we want more flexiblity, this works well for single threaded code ...
 		buffer_.consume(buffer_.size());
 
-		asio::async_read(
+		boost::asio::async_read(
 			conn->socket(),
-			/*asio::buffer(buffer_, 4),*/
+			/*boost::asio::buffer(buffer_, 4),*/
 			buffer_.prepare(4),
 			std::move(handler)
 		);

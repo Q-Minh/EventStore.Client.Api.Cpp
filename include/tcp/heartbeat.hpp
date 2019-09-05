@@ -5,8 +5,8 @@
 
 #include <memory>
 
-#include <asio/error_code.hpp>
-#include <asio/basic_waitable_timer.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/basic_waitable_timer.hpp>
 
 #include "logger.hpp"
 #include "guid.hpp"
@@ -26,7 +26,7 @@ class heartbeat_op
 public:
 	using connection_type = ConnectionType;
 	using clock_type = typename ConnectionType::clock_type;
-	using waitable_timer_type = asio::basic_waitable_timer<clock_type>;
+	using waitable_timer_type = boost::asio::basic_waitable_timer<clock_type>;
 
 	explicit heartbeat_op(
 		std::shared_ptr<connection_type> const& connection
@@ -123,13 +123,13 @@ public:
 		}
 	}
 
-	void operator()(asio::error_code ec)
+	void operator()(boost::system::error_code ec)
 	{
 		if (!ec)
 		{
 			initiate();
 		}
-		else if (ec == asio::error::operation_aborted)
+		else if (ec == boost::asio::error::operation_aborted)
 		{
 			// heartbeat was cancelled for some reason
 			ES_WARN("heartbeats aborted, {}", ec.message());

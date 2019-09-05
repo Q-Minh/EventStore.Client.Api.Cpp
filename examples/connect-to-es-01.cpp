@@ -2,11 +2,11 @@
 #include <mutex>
 #include <condition_variable>
 
-#include <asio/io_context.hpp>
-#include <asio/ip/basic_resolver.hpp>
-#include <asio/ip/tcp.hpp>
-#include <asio/ip/address.hpp>
-#include <asio/buffer.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/basic_resolver.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio/buffer.hpp>
 
 #include "logger.hpp"
 #include "connection_settings.hpp"
@@ -39,10 +39,10 @@ int main(int argc, char** argv)
 
 	try
 	{
-		asio::io_context ioc;
+		boost::asio::io_context ioc;
 
-		asio::ip::tcp::endpoint endpoint;
-		endpoint.address(asio::ip::make_address_v4(ep));
+		boost::asio::ip::tcp::endpoint endpoint;
+		endpoint.address(boost::asio::ip::make_address_v4(ep));
 		endpoint.port(port);
 		
 		es::user::user_credentials credentials(username, password);
@@ -53,11 +53,11 @@ int main(int argc, char** argv)
 			.build();
 
 		using discovery_service_type = es::tcp::services::discovery_service;
-		auto& discovery_service = asio::make_service<discovery_service_type>(ioc, endpoint, asio::ip::tcp::endpoint(), false);
+		auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
 		
 		using connection_type = 
 			es::connection::basic_tcp_connection<
-				asio::steady_timer, 
+				boost::asio::steady_timer, 
 				discovery_service_type, 
 				es::operation<>
 			>;
@@ -68,12 +68,12 @@ int main(int argc, char** argv)
 			std::make_shared<connection_type>(
 				ioc, 
 				connection_settings, 
-				asio::dynamic_buffer(buffer_storage)
+				boost::asio::dynamic_buffer(buffer_storage)
 			);
 
 
 		tcp_connection->async_connect(
-			[tcp_connection=tcp_connection](asio::error_code ec, es::detail::tcp::tcp_package_view view)
+			[tcp_connection=tcp_connection](boost::system::error_code ec, es::detail::tcp::tcp_package_view view)
 		{
 			if (!ec || ec == es::connection_errors::authentication_failed)
 			{

@@ -22,8 +22,8 @@ void async_set_stream_metadata(
 )
 {
 	static_assert(
-		std::is_invocable_v<WriteResultHandler, std::error_code, std::optional<write_result>>,
-		"WriteResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::write_result>)"
+		std::is_invocable_v<WriteResultHandler, boost::system::error_code, std::optional<write_result>>,
+		"WriteResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::write_result>)"
 	);
 
 	std::vector<event_data> events{};

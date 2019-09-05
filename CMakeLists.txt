@@ -5,12 +5,14 @@ project (event-store-client-api)
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     include (cmake/msvc.cmake)
     configure_msvc_runtime()
+	set (_additional_win_compile_defs "_WIN32_WINNT=0x0A00")
 endif()
 
-find_package(asio CONFIG REQUIRED)
+# find_package(asio CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
-find_package(boost REQUIRED COMPONENTS uuid container-hash)
+find_package(Boost REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 
 set(_sources "")
@@ -28,6 +30,7 @@ INTERFACE
 	include/all_events_slice.hpp
 	include/append_to_stream.hpp
 	include/catchup_subscription_settings.hpp
+	include/cluster_settings.hpp
 	include/commit_transaction.hpp
 	include/conditional_append_to_stream.hpp
 	include/connection_result.hpp
@@ -83,6 +86,9 @@ INTERFACE
 	# error
 	include/error/error.hpp
 
+	# messages
+	include/message/cluster_messages.hpp
+
 	# system
 	include/system/consumer_strategies.hpp
 	include/system/metadata.hpp
@@ -98,6 +104,7 @@ INTERFACE
   
     # tcp
 	include/tcp/authenticate.hpp
+	include/tcp/cluster_discovery_service.hpp
     include/tcp/connect.hpp
     include/tcp/discovery_service.hpp
     include/tcp/gossip_seed.hpp
@@ -115,20 +122,26 @@ INTERFACE
 target_include_directories(${PROJECT_NAME} 
 INTERFACE
     include/
-    ${Boost_INCLUDE_DIRS}
+    # ${Boost_INCLUDE_DIRS}
 )
 target_compile_definitions(${PROJECT_NAME}
 INTERFACE
-    BOOST_UUID_FORCE_AUTO_LINK
-    _WIN32_WINNT=0x0A00
+	BOOST_UUID_FORCE_AUTO_LINK
+	BOOST_ERROR_CODE_HEADER_ONLY
+	${_additional_win_compile_defs}
 )
+get_target_property(_compile_defs ${PROJECT_NAME} INTERFACE_COMPILE_DEFINITIONS)
+message (STATUS "compile defs: ${_compile_defs}")
 target_link_libraries(${PROJECT_NAME}
 INTERFACE
-    asio
-    asio::asio
+    # asio
+    # boost::asio::asio
+	Boost::boost
     spdlog::spdlog
     protobuf::libprotobuf
     protobuf::libprotobuf-lite
+	nlohmann_json 
+	nlohmann_json::nlohmann_json
 )
 # set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON) only if dll
 
@@ -154,6 +167,7 @@ endfunction()
 
 # build_executable(connect-to-es-01 "examples/connect-to-es-01.cpp" "${_sources}")
 build_executable(append-to-stream "examples/append_to_stream.cpp" "${_sources}")
+build_executable(append-to-stream-cluster "examples/append_to_stream_cluster.cpp" "${_sources}")
 build_executable(append-to-stream-batch "examples/append_to_stream_batch.cpp" "${_sources}")
 build_executable(read-stream-event "examples/read_stream_event.cpp" "${_sources}")
 build_executable(delete-stream "examples/delete_stream.cpp" "${_sources}")
@@ -190,16 +204,10 @@ PRIVATE
 )
 target_compile_definitions(unit-tests
 PRIVATE
-    BOOST_UUID_FORCE_AUTO_LINK
 	_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
 )
 target_link_libraries(unit-tests 
 PRIVATE 
 	${PROJECT_NAME}
     Catch2::Catch2
-    asio
-    asio::asio
-    spdlog::spdlog
-    protobuf::libprotobuf
-    protobuf::libprotobuf-lite
 )

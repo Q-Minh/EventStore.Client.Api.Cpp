@@ -17,8 +17,8 @@ void async_get_stream_metadata(
 )
 {
 	static_assert(
-		std::is_invocable_v<StreamMetadataReadResultHandler, std::error_code, std::optional<stream_metadata_result_raw>>,
-		"StreamMetadataReadResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::stream_metadata_result_raw>)"
+		std::is_invocable_v<StreamMetadataReadResultHandler, boost::system::error_code, std::optional<stream_metadata_result_raw>>,
+		"StreamMetadataReadResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::stream_metadata_result_raw>)"
 	);
 
 	async_read_stream_event(
@@ -26,7 +26,7 @@ void async_get_stream_metadata(
 		system::streams::meta_stream_of(stream),
 		std::int64_t(-1),
 		false,
-		[handler = std::move(handler), stream = stream](std::error_code ec, std::optional<event_read_result> result)
+		[handler = std::move(handler), stream = stream](boost::system::error_code ec, std::optional<event_read_result> result)
 	{
 		if (!ec)
 		{

@@ -56,8 +56,8 @@ public:
 	void async_start(PersistentSubscriptionEventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
 		static_assert(
-			std::is_invocable_v<PersistentSubscriptionEventAppearedHandler, resolved_event, std::int32_t>,
-			"PersistentSubscriptionEventAppearedHandler requirements not met, must have signature R(es::resolved_event, std::int32_t)"
+			std::is_invocable_v<PersistentSubscriptionEventAppearedHandler, resolved_event const&, std::int32_t>,
+			"PersistentSubscriptionEventAppearedHandler requirements not met, must have signature R(es::resolved_event const&, std::int32_t)"
 		);
 
 		message::ConnectToPersistentSubscription request;
@@ -137,7 +137,7 @@ public:
 			message::SubscriptionDropped message;
 			message.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 
-			std::error_code ec;
+			boost::system::error_code ec;
 			if (message.reason() == message::SubscriptionDropped_SubscriptionDropReason_AccessDenied)
 			{
 				ec = make_error_code(subscription_errors::access_denied);

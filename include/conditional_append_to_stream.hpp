@@ -33,8 +33,8 @@ void async_conditional_append_to_stream(
 )
 {
 	static_assert(
-		std::is_invocable_v<WriteResultHandler, std::error_code, std::optional<write_result>>,
-		"WriteResultHandler requirements not met, must have signature R(std::error_code, std::optional<es::write_result>)"
+		std::is_invocable_v<WriteResultHandler, boost::system::error_code, std::optional<write_result>>,
+		"WriteResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::write_result>)"
 		);
 
 	message::WriteEvents message;
@@ -99,7 +99,7 @@ void async_conditional_append_to_stream(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view)
+		[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::write_events_completed)
 		{

@@ -2,21 +2,24 @@
 
 ### Introduction
 
-An [Asio (standalone version)](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html) based C++ client library for [EventStore](https://eventstore.org/).
+A [Boost.Asio and Boost.Beast](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html) based C++ client library for [EventStore](https://eventstore.org/).
 
 ### Prerequisites
 
-- a C++ 17 compiler (subject to change for C++11 or C++14)
+- a C++ 17 compiler
 - cmake >= 3.14 (or build by hand)
 - protoc (protobuf compiler) if you want to regenerate the message implementation
 
 ### Dependencies
 
 - [protobuf](https://developers.google.com/protocol-buffers/)
-- [standalone asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
-- [spdlog](https://github.com/gabime/spdlog) (for library maintainers)
+- [Boost.Asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
+- [Boost.System (header-only)](https://www.boost.org/doc/libs/1_68_0/libs/system/doc/index.html)
+- [Boost.Beast](https://www.boost.org/doc/libs/1_71_0/libs/beast/doc/html/index.html)
 - [Boost.Uuid](https://www.boost.org/doc/libs/1_71_0/libs/uuid/doc/index.html)
 - [Boost.ContainerHash](https://www.boost.org/doc/libs/1_71_0/doc/html/hash.html)
+- [spdlog](https://github.com/gabime/spdlog)
+- [JSON for Modern C++](https://github.com/nlohmann/json)
 - [Catch2](https://github.com/catchorg/Catch2) (for tests only)
 
 ### Help installing dependencies
@@ -25,10 +28,13 @@ You can use [vcpkg](https://github.com/microsoft/vcpkg) for dependency managemen
 
 ```
 # for windows
-./vcpkg install protobuf:x64-windows-static asio:x64-windows-static spdlog:x64-windows-static boost-uuid:x64-windows-static boost-container-hash:x64-windows-static catch2:x64-windows-static
+./vcpkg install protobuf:x64-windows-static asio:x64-windows-static \ 
+                spdlog:x64-windows-static boost-uuid:x64-windows-static \ 
+				boost-container-hash:x64-windows-static boost-beast:x64-windows-static \
+				nlohmann-json:x64-windows-static catch2:x64-windows-static
 
 # for linux
-./vcpkg install protobuf asio spdlog boost-uuid boost-container-hash catch2
+./vcpkg install protobuf asio spdlog boost-uuid boost-container-hash boost-beast nlohmann-json catch2
 ```
 
 ### Building
@@ -102,9 +108,9 @@ where:
 - catchup subscriptions :heavy_check_mark:
 - persistent subscriptions :heavy_check_mark:
 - transactions :heavy_check_mark:
-- connection configuration (retries, node preference, ssl, queue size, etc)
-- user management
-- cluster node discovery (IN PROGRESS)
+- connection configuration (retries, node preference, ssl, queue size, etc) (IN PROGRESS)
+- user management (IN PROGRESS)
+- cluster node discovery :heavy_check_mark:
 - projections
 
 ### Others
@@ -114,11 +120,9 @@ where:
 - documentation
 - more examples
 
-*Note* : Only TCP communication is considered for the time being. EventStore also offers an HTTP api.
-
 ### Useful links
 
-- [asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
+- [boost.asio](https://www.boost.org/doc/libs/1_71_0/doc/html/boost_asio.html)
 - [EventStore documentation](https://eventstore.org/docs/)
 - [EventStore .NET Client Api](https://github.com/EventStore/EventStore) (see ClientAPI and ClusterNode projects for debugging/development)
 - [protobuf for C++](https://developers.google.com/protocol-buffers/docs/cpptutorial)

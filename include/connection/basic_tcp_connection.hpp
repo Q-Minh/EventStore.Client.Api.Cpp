@@ -6,11 +6,11 @@
 #include <deque>
 #include <memory>
 
-#include <asio/io_context.hpp>
-#include <asio/ip/tcp.hpp>
-#include <asio/error_code.hpp>
-#include <asio/write.hpp>
-#include <asio/buffer.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/buffer.hpp>
 
 #include "logger.hpp"
 #include "guid.hpp"
@@ -34,13 +34,13 @@ template <
 	class DiscoveryService, 
 	class OperationType, 
 	class Allocator = std::allocator<std::uint8_t>,
-	class DynamicBuffer = asio::dynamic_vector_buffer<std::uint8_t, Allocator>>
+	class DynamicBuffer = boost::asio::dynamic_vector_buffer<std::uint8_t, Allocator>>
 class basic_tcp_connection
 	: public std::enable_shared_from_this<basic_tcp_connection<WaitableTimer, DiscoveryService, OperationType, Allocator, DynamicBuffer>>
 {
 public:
 	using self_type = basic_tcp_connection;
-	using executor_type = typename asio::ip::tcp::socket::executor_type;
+	using executor_type = typename boost::asio::ip::tcp::socket::executor_type;
 	using clock_type = typename WaitableTimer::clock_type;
 	using operation_type = OperationType;
 	using operations_map_type = es::operations_map<operation_type>;
@@ -74,7 +74,7 @@ public:
 	friend class subscription::subscription_base;
 
 	explicit basic_tcp_connection(
-		asio::io_context& ioc,
+		boost::asio::io_context& ioc,
 		es::connection_settings const& settings,
 		dynamic_buffer_type&& buffer
 	) : socket_(ioc), 
@@ -92,12 +92,12 @@ public:
 	void async_connect(ConnectionResultHandler&& handler)
 	{
 		static_assert(
-			std::is_invocable_v<ConnectionResultHandler, std::error_code, std::optional<connection_result>>,
-			"ConnectionResultHandler requirements not met, must have signature R(std::error_code, std::optional<connection_result>)"
+			std::is_invocable_v<ConnectionResultHandler, boost::system::error_code, std::optional<connection_result>>,
+			"ConnectionResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<connection_result>)"
 		);
 
 		auto identification_package_received_handler = 
-			[handler = std::move(handler)](std::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
+			[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
 		{
 			if (!ec || ec == es::connection_errors::authentication_failed)
 			{
@@ -114,7 +114,7 @@ public:
 		};
 
 		tcp::operations::connect_op<self_type, discovery_service_type, std::decay_t<decltype(identification_package_received_handler)>>
-			op{ shared_from_this(), std::move(identification_package_received_handler) };
+			op{ this->shared_from_this(), std::move(identification_package_received_handler) };
 
 		op.initiate();
 	}
@@ -122,7 +122,7 @@ public:
 	// send a tcp package to es server
 	void async_send(detail::tcp::tcp_package<>&& package)
 	{
-		asio::post(
+		boost::asio::post(
 			get_io_context(),
 			// use shared from this? it would extend the lifetime of the connection, even if client does not have any more references to it...
 			[this, package = std::move(package)]() mutable
@@ -148,17 +148,17 @@ public:
 		this->async_send(std::move(package));
 
 		tcp::operations::operation_op<self_type, waitable_timer_type, PackageReceivedHandler>
-			op{ shared_from_this(), std::move(handler), std::move(guid) };
+			op{ this->shared_from_this(), std::move(handler), std::move(guid) };
 
 		op.initiate();
 	}
 
 	// return socket
-	asio::ip::tcp::socket& socket() { return socket_; }
+	boost::asio::ip::tcp::socket& socket() { return socket_; }
 	// returns socket's executor
 	executor_type get_executor() { return socket_.get_executor(); }
 	// returns socket's io_context
-	asio::io_context& get_io_context() { return socket_.get_io_context(); }
+	boost::asio::io_context& get_io_context() { return *reinterpret_cast<boost::asio::io_context*>(&socket_.get_executor().context()); }
 	// returns elapsed time since the connection was created
 	typename clock_type::duration elapsed() const { return clock_type::now() - start_; }
 	// get connection settings
@@ -174,7 +174,7 @@ public:
 	}
 	
 private:
-	void on_package_received(asio::error_code ec, detail::tcp::tcp_package_view view)
+	void on_package_received(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		using tcp_command = detail::tcp::tcp_command;
 		using tcp_flags = detail::tcp::tcp_flags;
@@ -222,9 +222,9 @@ private:
 
 	void async_start_receive()
 	{
-		tcp::operations::read_tcp_package_op<self_type, dynamic_buffer_type> read_op{ shared_from_this(), buffer_ };
+		tcp::operations::read_tcp_package_op<self_type, dynamic_buffer_type> read_op{ this->shared_from_this(), buffer_ };
 		read_op.initiate(
-			[this](asio::error_code& ec, std::size_t frame_size)
+			[this](boost::system::error_code& ec, std::size_t frame_size)
 		{
 			if (!ec)
 			{
@@ -254,10 +254,10 @@ private:
 
 	void do_async_send()
 	{
-		asio::async_write(
+		boost::asio::async_write(
 			socket_,
-			asio::buffer(message_queue_.front().data(), message_queue_.front().size()),
-			[this](asio::error_code ec, std::size_t bytes_written)
+			boost::asio::buffer(message_queue_.front().data(), message_queue_.front().size()),
+			[this](boost::system::error_code ec, std::size_t bytes_written)
 		{
 			if (!ec)
 			{
@@ -277,7 +277,7 @@ private:
 	unsigned int const& package_number() const { return package_no_; }
 
 private:
-	asio::ip::tcp::socket socket_;
+	boost::asio::ip::tcp::socket socket_;
 	es::connection_settings settings_;
 	std::string connection_name_;
 	std::chrono::time_point<clock_type> start_;

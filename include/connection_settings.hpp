@@ -19,7 +19,7 @@ class connection_settings_builder;
 class connection_settings
 {
 public:
-	static connection_settings default() { return connection_settings(); }
+	static connection_settings null() { return connection_settings(); }
 
     connection_settings(connection_settings const& other) = default;
     connection_settings& operator=(connection_settings const&) = delete;
@@ -116,14 +116,16 @@ public:
     {
         settings_.gossip_seeds_.clear();
         settings_.gossip_seeds_.insert(settings_.gossip_seeds_.end(), seeds.cbegin(), seeds.cend());
+        return *this;
     }
-	self_type& with_gossip_seeds(std::vector<asio::ip::tcp::endpoint> const& seeds)
+	self_type& with_gossip_seeds(std::vector<boost::asio::ip::tcp::endpoint> const& seeds)
 	{
 		settings_.gossip_seeds_.clear();
 		for (auto const& endpoint : seeds)
 		{
 			settings_.gossip_seeds_.push_back(tcp::gossip_seed(endpoint));
 		}
+        return *this;
 	}
 
     connection_settings build()

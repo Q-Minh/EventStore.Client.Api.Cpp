@@ -4,38 +4,36 @@
 #include <boost/asio/ip/basic_resolver.hpp>
 #include <boost/asio/ip/address.hpp>
 
-#include "read_stream_event.hpp"
+#include "event_data.hpp"
+#include "append_to_stream.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
 #include "tcp/discovery_service.hpp"
+#include "tcp/cluster_discovery_service.hpp"
 
 int main(int argc, char** argv)
 {
 	GOOGLE_PROTOBUF_VERSION;
 
-	if (argc != 8)
+	if (argc != 10)
 	{
-		ES_ERROR("expected 7 arguments, got {}", argc - 1);
-		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> <stream-name> <event-number> [trace | debug | info | warn | error | critical | off]");
-		ES_ERROR("example: ./read-stream-event 127.0.0.1 1113 admin changeit test-stream 0 info");
+		ES_ERROR("expected 9 arguments, got {}", argc - 1);
+		ES_ERROR("usage: <executable> <username> <password> <gossip-seed1-ip> <port> <gossip-seed2-ip> <port> <gossip-seed3-ip> <port> [trace | debug | info | warn | error | critical | off]");
+		ES_ERROR("example: ./append-to-stream-cluster admin changeit 127.0.0.1 3112 127.0.0.1 4112 127.0.0.1 5112 info");
+		ES_ERROR("tool will write the following data to event store connecting to one of the three cluster node's specified as arguments");
+		ES_ERROR("stream={}\n\tevent-type={}\n\tis-json={}\n\tdata={}\n\tmetadata={}", "test-stream", "Test.Type", true, "{ \"test\": \"data\"}", "test metadata");
 		return 0;
 	}
 
 	// get command arguments
-	std::string ep = argv[1];
-	int port = std::stoi(argv[2]);
-	std::string username = argv[3];
-	std::string password = argv[4];
-	std::string stream = argv[5];
-	std::int64_t event_no = std::stoll(argv[6]);
-	std::string_view lvl = argv[7];
+	std::string username = argv[1];
+	std::string password = argv[2];
+	std::string ep1 = argv[3], ep2 = argv[5], ep3 = argv[7];
+	int port1 = std::stoi(argv[4]), port2 = std::stoi(argv[6]), port3 = std::stoi(argv[8]);
+	std::string_view lvl = argv[9];
 	ES_DEFAULT_LOG_LEVEL(lvl);
 
 	boost::asio::io_context ioc;
-
-	boost::asio::ip::tcp::endpoint endpoint;
-	endpoint.address(boost::asio::ip::make_address_v4(ep));
-	endpoint.port(port);
 
 	// all operation will be authenticated by default
 	es::user::user_credentials credentials(username, password);
@@ -44,12 +42,28 @@ int main(int argc, char** argv)
 		es::connection_settings_builder()
 		.with_default_user_credentials(credentials)
 		.require_master(false)
+		.with_gossip_seeds({ 
+			boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address_v4(ep1), port1),
+			boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address_v4(ep2), port2),
+			boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address_v4(ep3), port3)
+		})
 		.build();
 
 	// register the discovery service to enable the es tcp connection to discover endpoints to connect to
 	// for now, the discovery service doesn't do anything, since we haven't implemented cluster node discovery
-	using discovery_service_type = es::tcp::services::discovery_service;
-	auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
+	using discovery_service_type = es::tcp::services::cluster_discovery_service;
+
+	auto& discovery_service = boost::asio::make_service<discovery_service_type>(
+		ioc, 
+		es::cluster_settings_builder().keep_discovering()
+		.with_gossip_seed_endpoints(
+			connection_settings.gossip_seeds().begin(), 
+			connection_settings.gossip_seeds().end()
+		)
+		.with_max_discover_attempts(10)
+		.with_gossip_timeout(std::chrono::seconds(60))
+		.build()
+	);
 
 	// parameterize our tcp connection with steady timer, the basic discovery service and our type-erased operation
 	using connection_type =
@@ -119,41 +133,27 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	// read one stream event, the given completion handler will
+	std::vector<es::event_data> events;
+	es::event_data event{ es::guid(), "Test.Type", true, "{ \"test\": \"data\"}", "test metadata" };
+	events.push_back(event);
+	std::string stream_name = "test-stream";
+
+	// append one stream event, the given completion handler will
 	// be called once a server response with respect to this 
 	// operation has been received or has timed out
-	bool resolve_links_tos = true;
-	es::async_read_stream_event(
+	es::async_append_to_stream(
 		tcp_connection,
-		stream,
-		event_no,
-		resolve_links_tos,
-		[tcp_connection = tcp_connection, &stream, event_no = event_no](boost::system::error_code ec, std::optional<es::event_read_result> result)
+		stream_name,
+		std::move(events),
+		[tcp_connection = tcp_connection, stream_name](boost::system::error_code ec, std::optional<es::write_result> result)
 	{
 		if (!ec)
 		{
-			auto& read_result = result.value();
-			ES_INFO("read event {} from stream {}", read_result.event_number(), read_result.stream());
-
-			if (!read_result.event().has_value()) return;
-			auto& event = read_result.event().value();
-
-			ES_INFO("stream-id={}\n\tresolved={}\n\tevent-number={}\n\tevent-id={}\n\tis-json={}\n\tevent-type={}\n\tcreated={}\n\tcreated_epoch={}\n\tmetadata={}\n\tdata={}",
-				event.event().value().stream_id(),
-				event.is_resolved(),
-				event.event().value().event_number(),
-				es::to_string(event.event().value().event_id()),
-				event.event().value().is_json(),
-				event.event().value().event_type(),
-				event.event().value().created(),
-				event.event().value().created_epoch(),
-				event.event().value().metadata(),
-				event.event().value().content()
-			);
+			ES_INFO("successfully appended to stream {}, next expected version={}", stream_name, result.value().next_expected_version());
 		}
 		else
 		{
-			ES_ERROR("error trying to read event {} from stream {}, {}", event_no, stream, ec.message());
+			ES_ERROR("error appending to stream : {}", ec.message());
 			return;
 		}
 	}

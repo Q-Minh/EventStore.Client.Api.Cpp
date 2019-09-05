@@ -1,13 +1,13 @@
 #pragma once
 
-#ifndef ES_operations_map_HPP
-#define ES_operations_map_HPP
+#ifndef ES_OPERATIONS_MAP_HPP
+#define ES_OPERATIONS_MAP_HPP
 
 #include <memory>
 #include <unordered_map>
 #include <utility>
 
-#include <asio/error_code.hpp>
+#include <boost/asio/error.hpp>
 
 #include "guid.hpp"
 #include "tcp/tcp_package.hpp"
@@ -22,12 +22,12 @@ public:
 	using package_view_type = detail::tcp::tcp_package_view;
 
 	template <typename CompletionHandler>
-	operation(CompletionHandler&& token, Allocator& alloc = Allocator())
+	operation(CompletionHandler&& token, Allocator const& alloc = Allocator())
 		: op_(nullptr), alloc_(alloc)
 	{
 		static_assert(
-			std::is_invocable_r_v<void, CompletionHandler, asio::error_code, package_view_type>,
-			"CompletionToken must have signature void(asio::error_code, es::internal::tcp::tcp_package_view)"
+			std::is_invocable_r_v<void, CompletionHandler, boost::system::error_code, package_view_type>,
+			"CompletionToken must have signature void(boost::system::error_code, es::internal::tcp::tcp_package_view)"
 		);
 
 		op_ = (op_base*)alloc_.allocate(sizeof(op<CompletionHandler>));
@@ -61,7 +61,7 @@ public:
 		swap(alloc_, other.alloc_);
 	}
 
-	void operator()(asio::error_code ec, package_view_type package)
+	void operator()(boost::system::error_code ec, package_view_type package)
 	{
 		op_->handle(ec, package);
 	}
@@ -75,7 +75,7 @@ public:
 private:
 	struct op_base
 	{
-		virtual void handle(asio::error_code ec, package_view_type package) = 0;
+		virtual void handle(boost::system::error_code ec, package_view_type package) = 0;
 		virtual std::size_t size() const = 0;
 		virtual ~op_base() {}
 	};
@@ -83,7 +83,7 @@ private:
 	template <class CompletionHandler>
 	struct op : public op_base {
 		explicit op(CompletionHandler&& handler) : handler_(std::move(handler)) {}
-		virtual void handle(asio::error_code ec, package_view_type package) override { handler_(ec, package); }
+		virtual void handle(boost::system::error_code ec, package_view_type package) override { handler_(ec, package); }
 		virtual std::size_t size() const override { return sizeof(op<CompletionHandler>); }
 		CompletionHandler handler_;
 	};
@@ -129,4 +129,4 @@ private:
 
 } // es
 
-#endif // ES_operations_map_HPP
+#endif // ES_OPERATIONS_MAP_HPP

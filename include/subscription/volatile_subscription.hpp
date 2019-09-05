@@ -33,8 +33,8 @@ public:
 	void async_start(EventAppearedHandler&& event_appeared, SubscriptionDroppedHandler&& dropped)
 	{
 		static_assert(
-			std::is_invocable_v<EventAppearedHandler, resolved_event&>,
-			"EventAppearedHandler requirements not met, must have signature R(es::resolved_event&)"
+			std::is_invocable_v<EventAppearedHandler, resolved_event const&>,
+			"EventAppearedHandler requirements not met, must have signature R(es::resolved_event const&)"
 		);
 
 		message::SubscribeToStream request;
@@ -91,7 +91,7 @@ public:
 		}
 		if (view.command() == detail::tcp::tcp_command::stream_event_appeared)
 		{
-			message::StreamEventAppeared message;
+			static message::StreamEventAppeared message;
 			message.ParseFromArray(view.data() + view.message_offset(), view.message_size());
 			event_appeared(resolved_event(*message.mutable_event()));
 
