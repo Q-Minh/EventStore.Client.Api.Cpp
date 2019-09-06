@@ -12,18 +12,18 @@ class user_credentials
 {
 public:
 	user_credentials() = default;
-	explicit user_credentials(user_credentials const& other) = default;
-	explicit user_credentials(user_credentials&& other) noexcept = default;
+	user_credentials(user_credentials const& other) = default;
+	user_credentials(user_credentials&& other) noexcept = default;
 	user_credentials& operator=(user_credentials const& other) = default;
 
-	explicit user_credentials(
+	user_credentials(
 		std::string const& username,
 		std::string const& password
 	)
 		: username_(username), password_(password)
 	{}
 
-	explicit user_credentials(
+	user_credentials(
 		std::string&& username,
 		std::string&& password
 	)

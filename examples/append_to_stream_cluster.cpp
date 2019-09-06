@@ -1,6 +1,3 @@
-#include <mutex>
-#include <condition_variable>
-
 #include <boost/asio/ip/basic_resolver.hpp>
 #include <boost/asio/ip/address.hpp>
 
@@ -8,7 +5,6 @@
 #include "append_to_stream.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
-#include "tcp/discovery_service.hpp"
 #include "tcp/cluster_discovery_service.hpp"
 
 int main(int argc, char** argv)
@@ -35,12 +31,9 @@ int main(int argc, char** argv)
 
 	boost::asio::io_context ioc;
 
-	// all operation will be authenticated by default
-	es::user::user_credentials credentials(username, password);
-
 	auto connection_settings =
 		es::connection_settings_builder()
-		.with_default_user_credentials(credentials)
+		.with_default_user_credentials({username, password})
 		.require_master(false)
 		.with_gossip_seeds({ 
 			boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address_v4(ep1), port1),
@@ -67,37 +60,19 @@ int main(int argc, char** argv)
 
 	// parameterize our tcp connection with steady timer, the basic discovery service and our type-erased operation
 	using connection_type =
-		es::connection::basic_tcp_connection<
-		boost::asio::steady_timer,
-		discovery_service_type,
-		es::operation<>
-		>;
+		es::connection::basic_tcp_connection<boost::asio::steady_timer, discovery_service_type, es::operation<>>;
 
-	// hold storage for the tcp connection to read into
-	// this is not necessary, we only need to do this because asio's dynamic buffer
-	// does not own the storage, but any type satisfying DynamicBuffer requirements
-	// will do
-	std::vector<std::uint8_t> buffer_storage;
-
-	std::shared_ptr<connection_type> tcp_connection =
-		std::make_shared<connection_type>(
-			ioc,
-			connection_settings,
-			boost::asio::dynamic_buffer(buffer_storage)
-			);
+	auto tcp_connection = std::make_shared<connection_type>(ioc, connection_settings);
 
 	// wait for connection before sending operations
 	bool is_connected{ false };
 	bool notification{ false };
-	std::mutex mutex;
-	std::condition_variable cv;
 
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info
 	tcp_connection->async_connect(
-		[tcp_connection = tcp_connection, &is_connected, &notification, &mutex, &cv](boost::system::error_code ec, std::optional<es::connection_result> result)
+		[tcp_connection = tcp_connection, &is_connected, &notification](boost::system::error_code ec, std::optional<es::connection_result> result)
 	{
-		std::lock_guard<std::mutex> lock(mutex);
 		notification = true;
 
 		if (!ec || ec == es::connection_errors::authentication_failed)
@@ -113,23 +88,17 @@ int main(int argc, char** argv)
 			// es connection failed
 			ES_ERROR("client has failed to identify with server, {}", ec.message());
 		}
-
-		// notify one waiting thread that the connection operation has ended
-		cv.notify_one();
 	}
 	);
 
-	// run io_context in a single thread, it is safe to use io_context concurrently
-	std::thread message_pump{ [&ioc]() { ioc.run(); } };
-
-	// wait for server connection response
+	while (!notification)
 	{
-		std::unique_lock<std::mutex> lock(mutex);
-		cv.wait(lock, [&notification] { return notification; });
+		ioc.poll();
 	}
 
 	if (!is_connected)
 	{
+		ES_ERROR("could not connect to es");
 		return 0;
 	}
 
@@ -159,7 +128,7 @@ int main(int argc, char** argv)
 	}
 	);
 
-	message_pump.join();
+	ioc.run();
 
 	return 0;
 }
