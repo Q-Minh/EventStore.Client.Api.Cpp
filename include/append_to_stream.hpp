@@ -13,11 +13,9 @@ Add user credentials parameter to have authentication per request
 #include "message/messages.pb.h"
 
 #include "expected_version.hpp"
-#include "logger.hpp"
+#include "tcp/handle_operation_error.hpp"
 #include "guid.hpp"
 #include "write_result.hpp"
-#include "error/error.hpp"
-#include "tcp/tcp_package.hpp"
 
 namespace es {
 
@@ -31,8 +29,8 @@ void async_append_to_stream(
 )
 {
 	static_assert(
-		std::is_invocable_v<WriteResultHandler, boost::system::error_code, std::optional<write_result>>,
-		"WriteResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::write_result>)"
+		std::is_invocable_v<WriteResultHandler, boost::system::error_code, std::optional<write_result>, std::optional<node_endpoints>>,
+		"WriteResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<es::write_result>, std::optional<es::node_endpoints>)"
 	);
 
 	message::WriteEvents request;
@@ -101,14 +99,16 @@ void async_append_to_stream(
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::write_events_completed)
 		{
-			ES_TRACE("unexpected command received : {}", detail::tcp::to_string(view.command()));
-			ec = make_error_code(communication_errors::unexpected_response);
+			/*ES_TRACE("unexpected command received : {}", detail::tcp::to_string(view.command()));
+			ec = make_error_code(communication_errors::unexpected_response);*/
+			detail::handle_operation_error(view, handler);
+			return;
 		}
 
 		// if there was an error, report immediately
 		if (ec)
 		{
-			handler(ec, {});
+			handler(ec, {}, {});
 			return;
 		}
 
@@ -121,12 +121,15 @@ void async_append_to_stream(
 			break;
 		case message::OperationResult::PrepareTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			return;
 		case message::OperationResult::ForwardTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			return;
 		case message::OperationResult::CommitTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			return;
 		case message::OperationResult::WrongExpectedVersion:
 			ec = make_error_code(stream_errors::wrong_expected_version);
@@ -159,13 +162,13 @@ void async_append_to_stream(
 					position{ prepare_position, commit_position }
 				});
 
-			handler(ec, std::move(result));
+			handler(ec, std::move(result), {});
 			return;
 		}
 		else
 		{
 			// on error, write result is garbage
-			handler(ec, {});
+			handler(ec, {}, {});
 			return;
 		}
 	}
