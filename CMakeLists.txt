@@ -71,6 +71,7 @@ INTERFACE
 	# buffer
 	include/buffer/basic_mutable_buffer_sequence.hpp
 	include/buffer/buffer_queue.hpp
+	include/buffer/dynamic_buffer.hpp
 
     # connection
     include/connection/authentication_info.hpp
