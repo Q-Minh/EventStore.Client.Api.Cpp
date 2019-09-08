@@ -127,11 +127,6 @@ int main(int argc, char** argv)
 		if (!ec)
 		{
 			ES_INFO("successfully appended to stream {}, next expected version={}", stream_name, result.value().next_expected_version());
-			tcp_connection->close(
-				[tcp_connection = tcp_connection, endpoint = endpoint]()
-			{
-				tcp_connection->async_connect(endpoint, [](boost::system::error_code ec, std::optional<es::connection_result> result) { ES_INFO("reconnect called"); if (!ec) ES_INFO("reconnected"); else ES_ERROR("{}", ec.message()); });
-			});
 		}
 		else if (ec == es::operation_errors::not_master)
 		{
