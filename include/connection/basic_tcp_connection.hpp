@@ -97,7 +97,28 @@ public:
 			"ConnectionResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<connection_result>)"
 		);
 
-		do_async_connect(std::forward<ConnectionResultHandler>(handler));
+		auto identification_package_received_handler = 
+			[this, handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
+		{
+			if (!ec || ec == es::connection_errors::authentication_failed)
+			{
+				// on success, command should be client identified
+				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
+				
+				is_closed_ = false;
+				handler(ec, std::make_optional(connection_result{ connection_id }));
+			}
+			else
+			{
+				// es connection failed
+				handler(ec, {});
+			}
+		};
+
+		tcp::operations::connect_op<self_type, discovery_service_type, std::decay_t<decltype(identification_package_received_handler)>>
+			op{ this->shared_from_this(), std::move(identification_package_received_handler) };
+
+		op.initiate();
 	}
 
 	template <class ConnectionResultHandler>
@@ -109,14 +130,13 @@ public:
 		);
 
 		auto identification_package_received_handler =
-			[this, handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
+			[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
 		{
 			if (!ec || ec == es::connection_errors::authentication_failed)
 			{
 				// on success, command should be client identified
 				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
 
-				is_closed_ = false;
 				handler(ec, std::make_optional(connection_result{ connection_id }));
 			}
 			else
@@ -218,33 +238,6 @@ public:
 	}
 	
 private:
-	template <class ConnectionResultHandler>
-	void do_async_connect(ConnectionResultHandler&& handler)
-	{
-		auto identification_package_received_handler =
-			[this, handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
-		{
-			if (!ec || ec == es::connection_errors::authentication_failed)
-			{
-				// on success, command should be client identified
-				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
-
-				is_closed_ = false;
-				handler(ec, std::make_optional(connection_result{ connection_id }));
-			}
-			else
-			{
-				// es connection failed
-				handler(ec, {});
-			}
-		};
-
-		tcp::operations::connect_op<self_type, discovery_service_type, std::decay_t<decltype(identification_package_received_handler)>>
-			op{ this->shared_from_this(), std::move(identification_package_received_handler) };
-
-		op.initiate();
-	}
-
 	void on_package_received(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		using tcp_command = detail::tcp::tcp_command;

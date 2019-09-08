@@ -121,41 +121,6 @@ public:
 		{ }
 	}
 
-	static void set_default_level(std::string_view lvl)
-	{
-		if (lvl == "trace")
-		{
-			spdlog::set_level(spdlog::level::trace);
-		}
-		else if (lvl == "debug")
-		{
-			spdlog::set_level(spdlog::level::debug);
-		}
-		else if (lvl == "info")
-		{
-			spdlog::set_level(spdlog::level::info);
-		}
-		else if (lvl == "warn")
-		{
-			spdlog::set_level(spdlog::level::warn);
-		}
-		else if (lvl == "error")
-		{
-			spdlog::set_level(spdlog::level::err);
-		}
-		else if (lvl == "critical")
-		{
-			spdlog::set_level(spdlog::level::critical);
-		}
-		else if (lvl == "off")
-		{
-			spdlog::set_level(spdlog::level::off);
-		}
-		else
-		{
-		}
-	}
-
 	template <class ...Args>
 	void trace(std::string_view message, Args&&... args)
 	{
@@ -256,20 +221,12 @@ private:
 
 }
 
-#define ES_TRACE(...) es::logger::get().trace_sync(__VA_ARGS__)
-#define ES_DEBUG(...) es::logger::get().debug_sync(__VA_ARGS__)
-#define ES_INFO(...) es::logger::get().info_sync(__VA_ARGS__)
-#define ES_WARN(...) es::logger::get().warn_sync(__VA_ARGS__)
-#define ES_ERROR(...) es::logger::get().error_sync(__VA_ARGS__)
-#define ES_CRITICAL(...) es::logger::get().critical_sync(__VA_ARGS__)
-
-// uncomment to get async logging
-//#define ES_TRACE(...) es::logger::get().trace(__VA_ARGS__)
-//#define ES_DEBUG(...) es::logger::get().debug(__VA_ARGS__)
-//#define ES_INFO(...) es::logger::get().info(__VA_ARGS__)
-//#define ES_WARN(...) es::logger::get().warn(__VA_ARGS__)
-//#define ES_ERROR(...) es::logger::get().error(__VA_ARGS__)
-//#define ES_CRITICAL(...) es::logger::get().critical(__VA_ARGS__)
+#define ES_TRACE(...) es::logger::get().trace(__VA_ARGS__)
+#define ES_DEBUG(...) es::logger::get().debug(__VA_ARGS__)
+#define ES_INFO(...) es::logger::get().info(__VA_ARGS__)
+#define ES_WARN(...) es::logger::get().warn(__VA_ARGS__)
+#define ES_ERROR(...) es::logger::get().error(__VA_ARGS__)
+#define ES_CRITICAL(...) es::logger::get().critical(__VA_ARGS__)
 
 #define ES_TRACE_SYNC(...) es::logger::get().trace_sync(__VA_ARGS__)
 #define ES_DEBUG_SYNC(...) es::logger::get().debug_sync(__VA_ARGS__)
@@ -278,6 +235,6 @@ private:
 #define ES_ERROR_SYNC(...) es::logger::get().error_sync(__VA_ARGS__)
 #define ES_CRITICAL_SYNC(...) es::logger::get().critical_sync(__VA_ARGS__)
 
-#define ES_DEFAULT_LOG_LEVEL(level) es::logger::get().set_level(level); es::logger::set_default_level(level);
+#define ES_DEFAULT_LOG_LEVEL(level) es::logger::get().set_level(level)
 
 #endif // LOGGER_HPP

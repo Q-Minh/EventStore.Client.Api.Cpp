@@ -49,7 +49,6 @@ public:
 		if (!ec)
 		{
 			auto& settings = conn->settings();
-
 			if (settings.default_user_credentials().null())
 			{
 				ES_DEBUG("tcp_connected_handler::operator() : no default user credentials");
@@ -147,19 +146,17 @@ template <class ConnectionType, class DiscoveryService, class PackageReceivedHan
 class tcp_connect_op
 {
 public:
-	using self_type = tcp_connect_op<ConnectionType, DiscoveryService, PackageReceivedHandler>;
 	using connection_type = ConnectionType;
 	using discovery_service_type = DiscoveryService;
 	using handler_type = PackageReceivedHandler;
-
+	
 	explicit tcp_connect_op(
 		std::shared_ptr<connection_type> const& connection,
 		PackageReceivedHandler&& handler,
-		typename DiscoveryService::endpoint_type const& endpoint
+		typename DiscoveryService::endpoint_type const& endpoint,
+		std::uint32_t attempt = 1
 	)
-		: connection_(connection), 
-		  handler_(std::move(handler)), 
-		  endpoint_(endpoint)
+		: connection_(connection), handler_(std::move(handler)), endpoint_(endpoint), attempt_(attempt)
 	{}
 
 	void initiate()
@@ -168,22 +165,72 @@ public:
 		if (connection_.expired()) return;
 		auto conn = connection_.lock();
 
+		if (attempt_ > conn->settings().max_reconnections())
+		{
+			handler_(connection_errors::max_reconnections, {});
+			return;
+		}
+
 		std::ostringstream oss{};
 		oss << endpoint_;
 		ES_DEBUG("tcp_connect_op::initiate : initiating socket connection to {}", oss.str());
 
-		tcp_connected_handler<connection_type, handler_type> handler(conn, std::move(handler_));
-		conn->socket().async_connect(
-			endpoint_,
-			std::move(handler)
-		);
-		return;
+		if (attempt_ > 1)
+		{
+			using timer_type = typename connection_type::waitable_timer_type;
+			std::shared_ptr<boost::asio::steady_timer> deadline = std::make_shared<boost::asio::steady_timer>(conn->get_io_context());
+			deadline->expires_after(conn->settings().reconnection_delay());
+			deadline->async_wait(std::move(*this));
+		}
+		else
+		{
+			this->operator()({});
+		}
+	}
+
+	void operator()(boost::system::error_code ec)
+	{
+		if (!ec)
+		{
+			if (connection_.expired()) return;
+			auto conn = connection_.lock();
+
+			conn->socket().async_connect(
+				endpoint_,
+				[this](boost::system::error_code ec)
+			{
+				if (!ec)
+				{
+					if (connection_.expired()) return;
+					auto conn = connection_.lock();
+
+					tcp_connected_handler<connection_type, handler_type> handler{ conn, std::move(handler_) };
+					handler(ec);
+					return;
+				}
+				else
+				{
+					++attempt_;
+					this->initiate();
+					return;
+				}
+			});
+
+			return;
+		}
+		else
+		{
+			ES_TRACE("tcp_connect_op::operator() : error with timer");
+			handler_(ec, {});
+			return;
+		}
 	}
 
 private:
 	std::weak_ptr<connection_type> connection_;
 	PackageReceivedHandler handler_;
 	typename DiscoveryService::endpoint_type endpoint_;
+	std::uint32_t attempt_;
 };
 
 template <class ConnectionType, class DiscoveryService, class PackageReceivedHandler>
