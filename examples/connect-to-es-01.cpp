@@ -16,7 +16,7 @@
 
 #include "connection/basic_tcp_connection.hpp"
 #include "error/error.hpp"
-#include "tcp/discovery_service.hpp"
+#include "tcp/basic_discovery_service.hpp"
 #include "user/user_credentials.hpp"
 
 int main(int argc, char** argv)
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 			.with_default_user_credentials(credentials)
 			.build();
 
-		using discovery_service_type = es::tcp::services::discovery_service;
+		using discovery_service_type = es::tcp::services::basic_discovery_service;
 		auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
 		
 		auto tcp_connection = std::make_shared<connection_type>(ioc, connection_settings);

@@ -85,7 +85,8 @@ public:
 		package_no_(0),
 		operations_map_(),
 		subscriptions_map_(),
-		buffer_(std::move(buffer))
+		buffer_(std::move(buffer)),
+		is_closed_(true)
 	{}
 
 	template <class ConnectionResultHandler>
@@ -97,13 +98,14 @@ public:
 		);
 
 		auto identification_package_received_handler = 
-			[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
+			[this, handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
 		{
 			if (!ec || ec == es::connection_errors::authentication_failed)
 			{
 				// on success, command should be client identified
 				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
 				
+				is_closed_ = false;
 				handler(ec, std::make_optional(connection_result{ connection_id }));
 			}
 			else
@@ -115,6 +117,37 @@ public:
 
 		tcp::operations::connect_op<self_type, discovery_service_type, std::decay_t<decltype(identification_package_received_handler)>>
 			op{ this->shared_from_this(), std::move(identification_package_received_handler) };
+
+		op.initiate();
+	}
+
+	template <class ConnectionResultHandler>
+	void async_connect(typename discovery_service_type::endpoint_type remote_ep, ConnectionResultHandler&& handler)
+	{
+		static_assert(
+			std::is_invocable_v<ConnectionResultHandler, boost::system::error_code, std::optional<connection_result>>,
+			"ConnectionResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<connection_result>)"
+		);
+
+		auto identification_package_received_handler =
+			[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
+		{
+			if (!ec || ec == es::connection_errors::authentication_failed)
+			{
+				// on success, command should be client identified
+				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
+
+				handler(ec, std::make_optional(connection_result{ connection_id }));
+			}
+			else
+			{
+				// es connection failed
+				handler(ec, {});
+			}
+		};
+
+		tcp::operations::tcp_connect_op<self_type, discovery_service_type, std::decay_t<decltype(identification_package_received_handler)>>
+			op{ this->shared_from_this(), std::move(identification_package_received_handler), remote_ep };
 
 		op.initiate();
 	}
@@ -133,8 +166,7 @@ public:
 			{
 				do_async_send();
 			}
-		}
-		);
+		});
 	}
 
 	// send tcp package with notification
@@ -153,6 +185,12 @@ public:
 		op.initiate();
 	}
 
+	// local endpoint
+	typename discovery_service_type::endpoint_type local_endpoint() const { return socket_.local_endpoint(); }
+	// remote endpoint
+	typename discovery_service_type::endpoint_type remote_endpoint() const { return socket_.remote_endpoint(); }
+	// connection closed
+	bool is_closed() const { return is_closed_; }
 	// return socket
 	boost::asio::ip::tcp::socket& socket() { return socket_; }
 	// returns socket's executor
@@ -166,11 +204,37 @@ public:
 	// get connection name
 	std::string const& connection_name() const { return connection_name_; }
 
-	// close connection cleanly, this method needs help
 	void close()
 	{
+		this->close([]() {});
+	}
+
+	// close connection cleanly, this method needs help
+	template <class ClosedHandler>
+	void close(ClosedHandler&& on_closed)
+	{
+		if (is_closed_) return;
+
+		package_no_ = 0;
+		is_closed_ = true;
+		std::ostringstream oss;
+		oss << std::this_thread::get_id();
+		ES_TRACE("close called from thread {}", oss.str());
 		// do cleanup
-		socket_.close();
+		boost::asio::post(
+			socket_.get_executor(),
+			[this, on_closed = std::forward<ClosedHandler>(on_closed)]() 
+		{
+			std::ostringstream oss;
+			oss << std::this_thread::get_id();
+			ES_TRACE("close handler called from thread {}", oss.str());
+			socket_.shutdown(socket_.shutdown_both);
+			boost::system::error_code ec;
+			socket_.close(ec);
+			// should propagate the error to user handle instead
+			if (ec) ES_ERROR("after socket::close : {}", ec.message());
+			on_closed();
+		});
 	}
 	
 private:
@@ -287,6 +351,7 @@ private:
 	operations_map_type operations_map_;
 	operations_map_type subscriptions_map_;
 	dynamic_buffer_type buffer_;
+	bool is_closed_;
 };
 
 } // connection
