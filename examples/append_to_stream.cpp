@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 		ES_ERROR("expected 5 arguments, got {}", argc - 1);
 		ES_ERROR("usage: <executable> <ip endpoint> <port> <username> <password> [trace | debug | info | warn | error | critical | off]");
 		ES_ERROR("example: ./append-to-stream 127.0.0.1 1113 admin changeit info");
-		ES_ERROR("tool will write the following data to single node event store");
+		ES_ERROR("tool will write the following data to event store");
 		ES_ERROR("stream={}\n\tevent-type={}\n\tis-json={}\n\tdata={}\n\tmetadata={}", "test-stream", "Test.Type", true, "{ \"test\": \"data\"}", "test metadata");
 		return 0;
 	}
@@ -60,7 +60,18 @@ int main(int argc, char** argv)
 		es::operation<>
 		>;
 
-	auto tcp_connection = std::make_shared<connection_type>(ioc, connection_settings);
+	// hold storage for the tcp connection to read into
+	// this is not necessary, we only need to do this because asio's dynamic buffer
+	// does not own the storage, but any type satisfying DynamicBuffer requirements
+	// will do
+	std::vector<std::uint8_t> buffer_storage;
+
+	std::shared_ptr<connection_type> tcp_connection =
+		std::make_shared<connection_type>(
+			ioc,
+			connection_settings,
+			boost::asio::dynamic_buffer(buffer_storage)
+			);
 
 	// wait for connection before sending operations
 	bool is_connected{ false };

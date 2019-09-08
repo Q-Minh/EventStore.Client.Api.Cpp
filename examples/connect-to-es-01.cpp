@@ -55,7 +55,21 @@ int main(int argc, char** argv)
 		using discovery_service_type = es::tcp::services::discovery_service;
 		auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
 		
-		auto tcp_connection = std::make_shared<connection_type>(ioc, connection_settings);
+		using connection_type = 
+			es::connection::basic_tcp_connection<
+				boost::asio::steady_timer, 
+				discovery_service_type, 
+				es::operation<>
+			>;
+
+		std::vector<std::uint8_t> buffer_storage;
+
+		std::shared_ptr<connection_type> tcp_connection = 
+			std::make_shared<connection_type>(
+				ioc, 
+				connection_settings, 
+				boost::asio::dynamic_buffer(buffer_storage)
+			);
 
 
 		tcp_connection->async_connect(

@@ -59,7 +59,18 @@ int main(int argc, char** argv)
 		es::operation<>
 		>;
 
-	auto tcp_connection = std::make_shared<connection_type>(ioc, connection_settings);
+	// hold storage for the tcp connection to read into
+	// this is not necessary, we only need to do this because asio's dynamic buffer
+	// does not own the storage, but any type satisfying DynamicBuffer requirements
+	// will do
+	std::vector<std::uint8_t> buffer_storage;
+
+	std::shared_ptr<connection_type> tcp_connection =
+		std::make_shared<connection_type>(
+			ioc,
+			connection_settings,
+			boost::asio::dynamic_buffer(buffer_storage)
+			);
 
 	// wait for connection before sending operations
 	bool is_connected{ false };

@@ -10,6 +10,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/error.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/asio/buffer.hpp>
 
 #include "logger.hpp"
 #include "guid.hpp"
@@ -18,7 +19,6 @@
 #include "duration_conversions.hpp"
 #include "operations_map.hpp"
 
-#include "buffer/dynamic_buffer.hpp"
 #include "subscription/subscription_base.hpp"
 #include "tcp/tcp_package.hpp"
 #include "tcp/read.hpp"
@@ -34,7 +34,7 @@ template <
 	class DiscoveryService, 
 	class OperationType, 
 	class Allocator = std::allocator<std::uint8_t>,
-	class DynamicBuffer = buffer::dynamic_buffer<std::uint8_t, Allocator>>
+	class DynamicBuffer = boost::asio::dynamic_vector_buffer<std::uint8_t, Allocator>>
 class basic_tcp_connection
 	: public std::enable_shared_from_this<basic_tcp_connection<WaitableTimer, DiscoveryService, OperationType, Allocator, DynamicBuffer>>
 {
@@ -76,7 +76,7 @@ public:
 	explicit basic_tcp_connection(
 		boost::asio::io_context& ioc,
 		es::connection_settings const& settings,
-		dynamic_buffer_type&& buffer = dynamic_buffer_type()
+		dynamic_buffer_type&& buffer
 	) : socket_(ioc), 
 		settings_(settings),
 		connection_name_(std::string("ES-") + es::to_string(es::guid())),
