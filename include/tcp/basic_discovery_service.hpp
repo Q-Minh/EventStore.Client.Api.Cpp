@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef ES_DISCOVERY_SERVICE_HPP
-#define ES_DISCOVERY_SERVICE_HPP
+#ifndef ES_BASIC_DISCOVERY_SERVICE_HPP
+#define ES_BASIC_DISCOVERY_SERVICE_HPP
 
 #include <type_traits>
 
@@ -13,15 +13,15 @@ namespace es {
 namespace tcp {
 namespace services {
 
-class discovery_service
+class basic_discovery_service
 	: public boost::asio::execution_context::service
 {
 public:
 	using endpoint_type = boost::asio::ip::tcp::endpoint;
-	using key_type = discovery_service;
+	using key_type = basic_discovery_service;
 	inline static boost::asio::execution_context::id id;
 
-	explicit discovery_service(
+	explicit basic_discovery_service(
 		boost::asio::execution_context& ioc
 	) : boost::asio::execution_context::service(ioc),
 		endpoint_(),
@@ -29,7 +29,7 @@ public:
 		ssl_()
 	{}
 
-	explicit discovery_service(
+	explicit basic_discovery_service(
 		boost::asio::execution_context& ioc,
 		boost::asio::ip::tcp::endpoint const& endpoint,
 		boost::asio::ip::tcp::endpoint const& secure_endpoint,
@@ -62,7 +62,7 @@ public:
 	endpoint_type const& node_endpoint() const { return endpoint_; }
 	endpoint_type const& node_endpoint_secure() const { return secure_endpoint_; }
 
-	~discovery_service()
+	~basic_discovery_service()
 	{
 		shutdown();
 	}
@@ -79,4 +79,4 @@ private:
 } // tcp
 } // es
 
-#endif // ES_DISCOVERY_SERVICE_HPP
+#endif // ES_BASIC_DISCOVERY_SERVICE_HPP

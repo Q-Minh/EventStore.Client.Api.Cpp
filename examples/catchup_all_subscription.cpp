@@ -6,7 +6,7 @@
 
 #include "subscription/catchup_all_subscription.hpp"
 #include "connection/basic_tcp_connection.hpp"
-#include "tcp/discovery_service.hpp"
+#include "tcp/basic_discovery_service.hpp"
 
 int main(int argc, char** argv)
 {
@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 
 	// register the discovery service to enable the es tcp connection to discover endpoints to connect to
 	// for now, the discovery service doesn't do anything, since we haven't implemented cluster node discovery
-	using discovery_service_type = es::tcp::services::discovery_service;
+	using discovery_service_type = es::tcp::services::basic_discovery_service;
 	auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
 
 	// parameterize our tcp connection with steady timer, the basic discovery service and our type-erased operation

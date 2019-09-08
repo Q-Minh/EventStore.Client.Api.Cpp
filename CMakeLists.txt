@@ -107,7 +107,7 @@ INTERFACE
 	include/tcp/authenticate.hpp
 	include/tcp/cluster_discovery_service.hpp
     include/tcp/connect.hpp
-    include/tcp/discovery_service.hpp
+    include/tcp/basic_discovery_service.hpp
     include/tcp/gossip_seed.hpp
     include/tcp/heartbeat.hpp
     include/tcp/identify.hpp
