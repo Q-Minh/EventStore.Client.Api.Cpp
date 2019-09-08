@@ -30,16 +30,6 @@ enum class communication_errors
 	bad_request = 4
 };
 
-enum class operation_errors
-{
-	not_authenticated = 1,
-	not_handled = 2,
-	not_ready = 3,
-	too_busy = 4,
-	not_master = 5,
-	server_timeout = 6
-};
-
 enum class stream_errors
 {
 	wrong_expected_version = 1,
@@ -132,35 +122,6 @@ struct communication_category : public boost::system::error_category
 	}
 };
 
-struct operation_category : public boost::system::error_category
-{
-	const char* name() const noexcept override
-	{
-		return "eventstore.operation";
-	}
-
-	std::string message(int e) const override
-	{
-		switch (static_cast<operation_errors>(e))
-		{
-		case operation_errors::not_authenticated:
-			return "not authenticated for this operation";
-		case operation_errors::not_handled:
-			return "request was not handled by this cluster node";
-		case operation_errors::not_ready:
-			return "server was not ready, should retry";
-		case operation_errors::too_busy:
-			return "server was too busy, should retry";
-		case operation_errors::not_master:
-			return "cluster node is not master and require master was true, attempting to reconnect";
-		case operation_errors::server_timeout:
-			return "server timed out on prepare timeout, commit timeout or forward timeout, should retry";
-		default:
-			return "unknown error";
-		}
-	}
-};
-
 struct stream_category : public boost::system::error_category
 {
 	const char* name() const noexcept override
@@ -247,12 +208,6 @@ inline const communication_category& get_communication_category()
 	return comm_category;
 }
 
-inline const operation_category& get_operation_category()
-{
-	static operation_category instance{};
-	return instance;
-}
-
 inline const stream_category& get_stream_category()
 {
 	static stream_category str_category{};
@@ -277,11 +232,6 @@ inline boost::system::error_code make_error_code(es::communication_errors ec) no
 	return boost::system::error_code{ static_cast<int>(ec), es::error::get_communication_category() };
 }
 
-inline boost::system::error_code make_error_code(es::operation_errors ec) noexcept
-{
-	return boost::system::error_code{ static_cast<int>(ec), es::error::get_operation_category() };
-}
-
 inline boost::system::error_code make_error_code(es::stream_errors ec) noexcept
 {
 	return boost::system::error_code{ static_cast<int>(ec), es::error::get_stream_category() };
@@ -294,7 +244,6 @@ inline boost::system::error_code make_error_code(es::subscription_errors ec) noe
 
 static const boost::system::error_category& connection_category = error::get_connection_category();
 static const boost::system::error_category& communication_category = error::get_communication_category();
-static const boost::system::error_category& operation_category = error::get_operation_category();
 static const boost::system::error_category& stream_category = error::get_stream_category();
 static const boost::system::error_category& subscription_category = error::get_subscription_category();
 
@@ -311,12 +260,6 @@ struct is_error_code_enum<es::connection_errors>
 
 template <>
 struct is_error_code_enum<es::communication_errors>
-{
-	static constexpr bool value = true;
-};
-
-template <>
-struct is_error_code_enum<es::operation_errors>
 {
 	static constexpr bool value = true;
 };

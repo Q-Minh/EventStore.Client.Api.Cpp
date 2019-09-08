@@ -45,7 +45,6 @@ INTERFACE
 	include/get_stream_metadata.hpp
     include/guid.hpp
     include/logger.hpp
-	include/node_endpoints.hpp
     include/operations_map.hpp
 	include/persistent_subscription_settings.hpp
 	include/position.hpp
@@ -77,6 +76,8 @@ INTERFACE
     # connection
     include/connection/authentication_info.hpp
     include/connection/basic_tcp_connection.hpp
+    include/connection/connection_phase.hpp
+    include/connection/connection_state.hpp
     include/connection/constants.hpp
     include/connection/heartbeat_info.hpp
     include/connection/identity_info.hpp
@@ -104,11 +105,10 @@ INTERFACE
   
     # tcp
 	include/tcp/authenticate.hpp
-    include/tcp/basic_discovery_service.hpp
 	include/tcp/cluster_discovery_service.hpp
     include/tcp/connect.hpp
+    include/tcp/discovery_service.hpp
     include/tcp/gossip_seed.hpp
-	include/tcp/handle_operation_error.hpp
     include/tcp/heartbeat.hpp
     include/tcp/identify.hpp
 	include/tcp/operation.hpp

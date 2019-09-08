@@ -9,14 +9,11 @@
 
 #include <boost/asio/error.hpp>
 
-#include "message/messages.pb.h"
-
 #include "logger.hpp"
 #include "guid.hpp"
 #include "duration_conversions.hpp"
 
 #include "error/error.hpp"
-#include "tcp/connect.hpp"
 #include "tcp/tcp_package.hpp"
 
 namespace es {
@@ -52,7 +49,7 @@ public:
 		operations_map_type& op_map_ = this->get_operations_map(*conn);
 		op_map_.register_op(
 			key_,
-			[connection = connection_, handler = std::move(handler_), deadline = deadline_](boost::system::error_code ec, detail::tcp::tcp_package_view view)
+			[handler = std::move(handler_), deadline = deadline_](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 		{
 			deadline->cancel();
 			handler(ec, view);

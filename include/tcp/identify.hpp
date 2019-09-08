@@ -42,6 +42,7 @@ public:
 	) : connection_(connection), 
 		info_(), 
 		deadline_(), 
+		reconnections_(0), 
 		handler_(std::move(handler)), 
 		authenticated_(authenticated)
 	{
@@ -129,8 +130,9 @@ public:
 			do_identify(std::move(package));
 		}
 
-		ES_TRACE("identify_op::initiate : identification operation timeout={} ms",
-			ES_MILLISECONDS(conn->settings().operation_timeout())
+		ES_TRACE("identify_op::initiate : identification operation timeout={} ms, reconnection-no={}",
+			ES_MILLISECONDS(conn->settings().operation_timeout()),
+			reconnections_
 		);
 		deadline_->expires_after(conn->settings().operation_timeout());
 		deadline_->async_wait(std::move(*this));
@@ -148,7 +150,16 @@ public:
 
 		if (!ec)
 		{
-			// notify user of identify operation timing out
+			// check retries
+			auto max_reconnections = conn->settings().max_reconnections();
+			if (max_reconnections > 0 && reconnections_ < max_reconnections)
+			{
+				++reconnections_;
+				initiate();
+				return;
+			}
+
+			// else notify user of identify operation timing out
 			ec = make_error_code(connection_errors::operation_timeout);
 			op_map[info_.correlation_id()](ec, {});
 			return;
@@ -168,6 +179,7 @@ private:
 	detail::connection::identity_info<clock_type> info_;
 	
 	std::shared_ptr<waitable_timer_type> deadline_;
+	std::uint32_t reconnections_;
 	PackageReceivedHandler handler_;
 	bool authenticated_;
 };

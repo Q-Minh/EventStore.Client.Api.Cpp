@@ -110,12 +110,6 @@ public:
 		operations_.emplace(std::make_pair(guid, std::move(op)));
 	}
 
-	template <class... Args>
-	void register_op(guid_type const& guid, Args&&... args)
-	{
-		operations_.emplace(std::make_pair(guid, Operation(std::forward<Args>(args)...)));
-	}
-
 	bool contains(es::guid_type const& key) { return operations_.find(key) != operations_.cend(); }
 	Operation& operator[](es::guid_type const& key) { return operations_.at(key); }
 	Operation const& operator[](es::guid_type const& key) const { return operations_.at(key); }

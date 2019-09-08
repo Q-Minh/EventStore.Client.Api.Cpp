@@ -8,7 +8,7 @@
 #include "append_to_stream.hpp"
 
 #include "connection/basic_tcp_connection.hpp"
-#include "tcp/basic_discovery_service.hpp"
+#include "tcp/discovery_service.hpp"
 
 int main(int argc, char** argv)
 {
@@ -49,7 +49,7 @@ int main(int argc, char** argv)
 
 	// register the discovery service to enable the es tcp connection to discover endpoints to connect to
 	// for now, the discovery service doesn't do anything, since we haven't implemented cluster node discovery
-	using discovery_service_type = es::tcp::services::basic_discovery_service;
+	using discovery_service_type = es::tcp::services::discovery_service;
 	auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
 
 	// parameterize our tcp connection with steady timer, the basic discovery service and our type-erased operation
@@ -71,8 +71,7 @@ int main(int argc, char** argv)
 	// the async connect will call the given completion handler
 	// on error or success, we can inspect the error_code for more info
 	tcp_connection->async_connect(
-		[tcp_connection = tcp_connection, &is_connected, &notification, &mutex, &cv]
-	(boost::system::error_code ec, std::optional<es::connection_result> result)
+		[tcp_connection = tcp_connection, &is_connected, &notification, &mutex, &cv](boost::system::error_code ec, std::optional<es::connection_result> result)
 	{
 		std::lock_guard<std::mutex> lock(mutex);
 		notification = true;
@@ -93,7 +92,8 @@ int main(int argc, char** argv)
 
 		// notify one waiting thread that the connection operation has ended
 		cv.notify_one();
-	});
+	}
+	);
 
 	// run io_context in a single thread, it is safe to use io_context concurrently
 	std::thread message_pump{ [&ioc]() { ioc.run(); } };
@@ -121,28 +121,11 @@ int main(int argc, char** argv)
 		tcp_connection,
 		stream_name,
 		std::move(events),
-		[tcp_connection = tcp_connection, stream_name, &endpoint]
-	(boost::system::error_code ec, std::optional<es::write_result> result, std::optional<es::node_endpoints> eps)
+		[tcp_connection = tcp_connection, stream_name](boost::system::error_code ec, std::optional<es::write_result> result)
 	{
 		if (!ec)
 		{
 			ES_INFO("successfully appended to stream {}, next expected version={}", stream_name, result.value().next_expected_version());
-			tcp_connection->close(
-				[tcp_connection = tcp_connection, endpoint = endpoint]()
-			{
-				tcp_connection->async_connect(endpoint, [](boost::system::error_code ec, std::optional<es::connection_result> result) { ES_INFO("reconnect called"); if (!ec) ES_INFO("reconnected"); else ES_ERROR("{}", ec.message()); });
-			});
-		}
-		else if (ec == es::operation_errors::not_master)
-		{
-			std::ostringstream oss;
-			oss << eps.value().tcp_endpoint();
-			auto ep1 = oss.str();
-			oss.flush();
-			oss << eps.value().secure_tcp_endpoint();
-			auto ep2 = oss.str();
-			ES_WARN("cluster node was not master on append to stream operation, master info is tcp-endpoint={}, secure-tcp-endpoint={}", ep1, ep2);
-			return;
 		}
 		else
 		{
