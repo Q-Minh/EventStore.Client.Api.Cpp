@@ -10,8 +10,7 @@
 
 #include "delete_stream_result.hpp"
 #include "guid.hpp"
-#include "error/error.hpp"
-#include "tcp/tcp_package.hpp"
+#include "tcp/handle_operation_error.hpp"
 
 namespace es {
 
@@ -65,11 +64,13 @@ void async_delete_stream(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
+		[&ioc = connection->get_io_context(), handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::delete_stream_completed)
 		{
-			ec = make_error_code(communication_errors::unexpected_response);
+			//ec = make_error_code(communication_errors::unexpected_response);
+			auto& discovery_service = boost::asio::use_service<typename ConnectionType::discovery_service_type>(ioc);
+			detail::handle_operation_error(ec, view, discovery_service);
 		}
 
 		if (ec)
@@ -87,12 +88,15 @@ void async_delete_stream(
 			break;
 		case message::OperationResult::PrepareTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			break;
 		case message::OperationResult::CommitTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			break;
 		case message::OperationResult::ForwardTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			break;
 		case message::OperationResult::WrongExpectedVersion:
 			ec = make_error_code(stream_errors::wrong_expected_version);

@@ -13,11 +13,9 @@
 namespace es {
 namespace detail {
 
-template <class OperationResultHandler>
-void handle_operation_error(detail::tcp::tcp_package_view view, OperationResultHandler& handler)
+template <class DiscoveryService>
+void handle_operation_error(boost::system::error_code& ec, detail::tcp::tcp_package_view view, DiscoveryService& discovery_service)
 {
-	boost::system::error_code ec;
-
 	switch (view.command())
 	{
 	case detail::tcp::tcp_command::not_authenticated:
@@ -46,14 +44,21 @@ void handle_operation_error(detail::tcp::tcp_package_view view, OperationResultH
 			message::NotHandled::MasterInfo master;
 			master.ParseFromString(response.additional_info());
 
-			boost::asio::ip::tcp::endpoint ep{ boost::asio::ip::make_address_v4(master.external_tcp_address()), static_cast<unsigned short>(master.external_tcp_port()) };
-			boost::asio::ip::tcp::endpoint secure_ep{ boost::asio::ip::make_address_v4(master.external_secure_tcp_address()), static_cast<unsigned short>(master.external_secure_tcp_port()) };
+			boost::asio::ip::tcp::endpoint ep{ 
+				boost::asio::ip::make_address_v4(master.external_tcp_address()), 
+				static_cast<unsigned short>(master.external_tcp_port()) 
+			};
+			boost::asio::ip::tcp::endpoint secure_ep{ 
+				boost::asio::ip::make_address_v4(master.external_secure_tcp_address()), 
+				static_cast<unsigned short>(master.external_secure_tcp_port()) 
+			};
 
 			node_endpoints eps{ ep, secure_ep };
-			handler(ec, {}, std::make_optional(eps));
+			discovery_service.set_master(eps);
+			
 			return;
 		}
-		break;
+			break;
 		default:
 			break;
 		}
@@ -70,7 +75,6 @@ void handle_operation_error(detail::tcp::tcp_package_view view, OperationResultH
 		break;
 	}
 
-	handler(ec, {}, {});
 	return;
 }
 

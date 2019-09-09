@@ -13,8 +13,7 @@ Add user credentials parameter to have authentication per request
 #include "message/messages.pb.h"
 
 #include "guid.hpp"
-#include "error/error.hpp"
-#include "tcp/tcp_package.hpp"
+#include "tcp/handle_operation_error.hpp"
 
 namespace es {
 
@@ -64,11 +63,13 @@ void async_delete_persistent_subscription(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
+		[&ioc = connection->get_io_context(), handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::delete_persistent_subscription_completed)
 		{
-			ec = make_error_code(communication_errors::unexpected_response);
+			//ec = make_error_code(communication_errors::unexpected_response);
+			auto& discovery_service = boost::asio::use_service<typename ConnectionType::discovery_service_type>(ioc);
+			detail::handle_operation_error(ec, view, discovery_service);
 		}
 
 		// if there was an error, report immediately

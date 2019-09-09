@@ -16,8 +16,7 @@ Add user credentials parameter to have authentication per request
 #include "logger.hpp"
 #include "guid.hpp"
 #include "write_result.hpp"
-#include "error/error.hpp"
-#include "tcp/tcp_package.hpp"
+#include "tcp/handle_operation_error.hpp"
 
 namespace es {
 
@@ -99,11 +98,13 @@ void async_conditional_append_to_stream(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
+		[&ioc = connection->get_io_context(), handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::write_events_completed)
 		{
-			ec = make_error_code(communication_errors::unexpected_response);
+			//ec = make_error_code(communication_errors::unexpected_response);
+			auto& discovery_service = boost::asio::use_service<typename ConnectionType::discovery_service_type>(ioc);
+			detail::handle_operation_error(ec, view, discovery_service);
 		}
 
 		// if there was an error, report immediately
@@ -122,12 +123,15 @@ void async_conditional_append_to_stream(
 			break;
 		case message::OperationResult::PrepareTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			return;
 		case message::OperationResult::ForwardTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			return;
 		case message::OperationResult::CommitTimeout:
 			// retry
+			ec = make_error_code(operation_errors::server_timeout);
 			return;
 		case message::OperationResult::WrongExpectedVersion:
 			// this is the only difference with the basic "append_to_stream.hpp"

@@ -4,8 +4,7 @@
 #define ES_READ_STREAM_EVENTS_HPP
 
 #include "stream_events_slice.hpp"
-#include "error/error.hpp"
-#include "tcp/tcp_package.hpp"
+#include "tcp/handle_operation_error.hpp"
 
 namespace es {
 
@@ -63,20 +62,24 @@ void async_read_stream_events(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler), stream = stream, from_event_number = from_event_number, direction = direction]
+		[&ioc = connection->get_io_context(), handler = std::move(handler), stream = stream, from_event_number = from_event_number, direction = direction]
 	(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec)
 		{
+			auto& discovery_service = boost::asio::use_service<typename ConnectionType::discovery_service_type>(ioc);
+
 			if (direction == read_direction::forward &&
 				view.command() != detail::tcp::tcp_command::read_stream_events_forward_completed)
 			{
-				ec = make_error_code(communication_errors::unexpected_response);
+				//ec = make_error_code(communication_errors::unexpected_response);
+				detail::handle_operation_error(ec, view, discovery_service);
 			}
 			if (direction == read_direction::backward &&
 				view.command() != detail::tcp::tcp_command::read_stream_events_backward_completed)
 			{
-				ec = make_error_code(communication_errors::unexpected_response);
+				//ec = make_error_code(communication_errors::unexpected_response);
+				detail::handle_operation_error(ec, view, discovery_service);
 			}
 		}
 

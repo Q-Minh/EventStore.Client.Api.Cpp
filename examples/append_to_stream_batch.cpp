@@ -131,7 +131,7 @@ int main(int argc, char** argv)
 		stream_name,
 		std::move(events),
 		[tcp_connection = tcp_connection, stream_name, begin = begin]
-	(boost::system::error_code ec, std::optional<es::write_result> result, std::optional<es::node_endpoints> eps)
+	(boost::system::error_code ec, std::optional<es::write_result> result)
 	{
 		if (!ec)
 		{
@@ -140,17 +140,6 @@ int main(int argc, char** argv)
 				stream_name, 
 				result.value().next_expected_version(), 
 				ES_MILLISECONDS(end - begin));
-		}
-		else if (ec == es::operation_errors::not_master)
-		{
-			ES_WARN("operation failed because master was required, but connected to cluster node which is not master, {}", ec.message());
-			std::ostringstream oss;
-			oss << eps.value().tcp_endpoint();
-			auto ep1 = oss.str();
-			oss.flush();
-			oss << eps.value().secure_tcp_endpoint();
-			auto ep2 = oss.str();
-			ES_WARN("should reconnect to tcp-endpoint={}, secure-tcp-endpoint={}", ep1, ep2);
 		}
 		else
 		{

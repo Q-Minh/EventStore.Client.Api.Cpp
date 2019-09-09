@@ -115,7 +115,7 @@ int main(int argc, char** argv)
 		stream_name,
 		std::move(events),
 		[tcp_connection = tcp_connection, stream_name]
-	(boost::system::error_code ec, std::optional<es::write_result> result, std::optional<es::node_endpoints> eps)
+	(boost::system::error_code ec, std::optional<es::write_result> result)
 	{
 		if (!ec)
 		{
@@ -124,6 +124,7 @@ int main(int argc, char** argv)
 		else if (ec == es::operation_errors::not_master)
 		{
 			ES_WARN("operation failed because master was required, but connected to cluster node which is not master, {}", ec.message());
+			auto eps = boost::asio::use_service<typename connection_type::discovery_service_type>(tcp_connection->get_io_context()).master();
 			std::ostringstream oss;
 			oss << eps.value().tcp_endpoint();
 			auto ep1 = oss.str();

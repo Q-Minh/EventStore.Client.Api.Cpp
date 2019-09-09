@@ -7,8 +7,7 @@
 
 #include "guid.hpp"
 #include "write_result.hpp"
-#include "error/error.hpp"
-#include "tcp/tcp_package.hpp"
+#include "tcp/handle_operation_error.hpp"
 
 namespace es {
 
@@ -58,12 +57,14 @@ void async_commit_transaction(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler), connection = connection]
+		[&ioc = connection->get_io_context(), handler = std::move(handler), connection = connection]
 		(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 		{
 			if (!ec && view.command() != detail::tcp::tcp_command::transaction_commit_completed)
 			{
-				ec = make_error_code(communication_errors::unexpected_response);
+				//ec = make_error_code(communication_errors::unexpected_response);
+				auto& discovery_service = boost::asio::use_service<typename ConnectionType::discovery_service_type>(ioc);
+				detail::handle_operation_error(ec, view, discovery_service);
 			}
 
 			if (ec)
@@ -81,12 +82,15 @@ void async_commit_transaction(
 				break;
 			case message::OperationResult::PrepareTimeout:
 				// retry
+				ec = make_error_code(operation_errors::server_timeout);
 				return;
 			case message::OperationResult::ForwardTimeout:
 				// retry
+				ec = make_error_code(operation_errors::server_timeout);
 				return;
 			case message::OperationResult::CommitTimeout:
 				// retry
+				ec = make_error_code(operation_errors::server_timeout);
 				return;
 			case message::OperationResult::WrongExpectedVersion:
 				ec = make_error_code(stream_errors::wrong_expected_version);

@@ -10,8 +10,7 @@ Add user credentials parameter to have authentication per request
 #include <memory>
 
 #include "event_read_result.hpp"
-#include "error/error.hpp"
-#include "tcp/tcp_package.hpp"
+#include "tcp/handle_operation_error.hpp"
 
 namespace es {
 
@@ -66,11 +65,13 @@ void async_read_stream_event(
 
 	connection->async_send(
 		std::move(package),
-		[handler = std::move(handler), stream = stream, event_number = event_number](boost::system::error_code ec, detail::tcp::tcp_package_view view)
+		[&ioc = connection->get_io_context(), handler = std::move(handler), stream = stream, event_number = event_number](boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
 		if (!ec && view.command() != detail::tcp::tcp_command::read_event_completed)
 		{
-			ec = make_error_code(communication_errors::unexpected_response);
+			//ec = make_error_code(communication_errors::unexpected_response);
+			auto& discovery_service = boost::asio::use_service<typename ConnectionType::discovery_service_type>(ioc);
+			detail::handle_operation_error(ec, view, discovery_service);
 		}
 
 		if (ec)

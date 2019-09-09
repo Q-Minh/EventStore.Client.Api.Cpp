@@ -25,6 +25,7 @@
 #include <nlohmann/json.hpp>
 
 #include "cluster_settings.hpp"
+#include "node_endpoints.hpp"
 #include "error/error.hpp"
 #include "message/cluster_messages.hpp"
 
@@ -38,7 +39,7 @@ class cluster_discovery_service
 public:
 	using endpoint_type = boost::asio::ip::tcp::endpoint;
 	using key_type = cluster_discovery_service;
-	using node_endpoints_type = std::pair<endpoint_type, endpoint_type>;
+	using node_endpoints_type = node_endpoints;
 	inline static boost::asio::execution_context::id id;
 
 	explicit cluster_discovery_service(
@@ -46,7 +47,8 @@ public:
 	) : boost::asio::execution_context::service(ioc),
 		settings_(),
 		old_gossip_(),
-		context_(nullptr)
+		context_(nullptr),
+		master_()
 	{}
 
 	explicit cluster_discovery_service(
@@ -56,8 +58,17 @@ public:
 		: boost::asio::execution_context::service(ioc),
 		settings_(settings),
 		old_gossip_(),
-		context_(nullptr)
+		context_(nullptr),
+		master_()
 	{}
+
+	// set the cluster settings for this service
+	void set_cluster_settings(cluster_settings const& settings) { settings_ = settings; }
+
+	// get information on the master node's endpoints
+	std::optional<node_endpoints_type> const& master() const { return master_; }
+	// set master endpoint
+	void set_master(node_endpoints_type const& endpoints) { master_ = endpoints; }
 
 	template <class Connection, class Func>
 	void async_discover_node_endpoints(Connection& connection, Func&& f)
@@ -87,8 +98,8 @@ private:
 			std::optional<node_endpoints_type> endpoints = discover_endpoints();
 			if (endpoints.has_value())
 			{
-				// for now, we'll just use .first to use the normal tcp endpoint instead of the secure one (ssl not yet used)
-				f(boost::system::error_code(), endpoints.value().first);
+				// for now, we'll just use the normal tcp endpoint instead of the secure one (ssl not yet used)
+				f(boost::system::error_code(), endpoints.value().tcp_endpoint());
 				return true;
 			}
 			else
@@ -254,6 +265,25 @@ private:
 		std::string body = res.body();
 		auto json = nlohmann::json::parse(body);
 		message::cluster_info info = json.get<message::cluster_info>();
+
+		auto master = std::find_if(info.members().cbegin(), info.members().cend(), 
+			[](message::member_info const& info) 
+		{
+			return info.state() == message::virtual_node_state::master;
+		});
+
+		if (master != info.members().cend())
+		{
+			master_ = node_endpoints_type(
+				boost::asio::ip::tcp::endpoint(
+					boost::asio::ip::make_address_v4(master->external_tcp_ip()), master->external_tcp_port()
+				),
+				boost::asio::ip::tcp::endpoint(
+					boost::asio::ip::make_address_v4(master->external_tcp_ip()), master->external_secure_tcp_port()
+				)
+			);
+		}
+
 		return info;
 	}
 
@@ -319,14 +349,14 @@ private:
 		    return {};
 
 		// else we've found our best node!
-		node_endpoints_type endpoints;
-		endpoints.first = boost::asio::ip::tcp::endpoint(
+		auto ep1 = boost::asio::ip::tcp::endpoint(
 			boost::asio::ip::make_address_v4(best_node.external_tcp_ip()), best_node.external_tcp_port()
 		);
 
-		endpoints.second = boost::asio::ip::tcp::endpoint(
+		auto ep2 = boost::asio::ip::tcp::endpoint(
 			boost::asio::ip::make_address_v4(best_node.external_tcp_ip()), best_node.external_secure_tcp_port()
 		);
+		node_endpoints_type endpoints{ ep1, ep2 };
 
 		return std::make_optional(endpoints);
 	}
@@ -338,6 +368,7 @@ private:
 	cluster_settings settings_;
 	std::vector<message::member_info> old_gossip_;
 	boost::asio::io_context* context_;
+	std::optional<node_endpoints> master_;
 };
 
 } // services
