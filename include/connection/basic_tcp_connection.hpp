@@ -85,7 +85,8 @@ public:
 		package_no_(0),
 		operations_map_(),
 		subscriptions_map_(),
-		buffer_(std::move(buffer))
+		buffer_(std::move(buffer)),
+		is_closed_(true)
 	{}
 
 	template <class ConnectionResultHandler>
@@ -97,17 +98,20 @@ public:
 		);
 
 		auto identification_package_received_handler = 
-			[handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
+			[this, handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
 		{
 			if (!ec || ec == es::connection_errors::authentication_failed)
 			{
 				// on success, command should be client identified
 				if (view.command() != es::detail::tcp::tcp_command::client_identified) return;
 				
+				is_closed_ = false;
 				handler(ec, std::make_optional(connection_result{ connection_id }));
 			}
 			else
 			{
+				is_closed_ = false;
+				this->close([]() {});
 				// es connection failed
 				handler(ec, {});
 			}
@@ -133,8 +137,7 @@ public:
 			{
 				do_async_send();
 			}
-		}
-		);
+		});
 	}
 
 	// send tcp package with notification
@@ -166,11 +169,33 @@ public:
 	// get connection name
 	std::string const& connection_name() const { return connection_name_; }
 
-	// close connection cleanly, this method needs help
+	bool is_closed() const { return is_closed_; }
+
+	// close connection
+	template <class ConnectionClosedHandler>
+	void close(ConnectionClosedHandler&& handler)
+	{
+		if (is_closed_) return;
+
+		// do cleanup
+		is_closed_ = true;
+
+		boost::system::error_code ec;
+		socket_.shutdown(socket_.shutdown_both, ec);
+		boost::asio::post(
+			this->get_executor(),
+			[this, handler = std::forward<ConnectionClosedHandler>(handler)]() 
+		{ 
+			boost::system::error_code ec;
+			// use error code so that even if socket is closed, the call doesn't throw
+			socket_.close(ec); 
+			handler();
+		});
+	}
+
 	void close()
 	{
-		// do cleanup
-		socket_.close();
+		this->close([]() {});
 	}
 	
 private:
@@ -287,6 +312,7 @@ private:
 	operations_map_type operations_map_;
 	operations_map_type subscriptions_map_;
 	dynamic_buffer_type buffer_;
+	bool is_closed_;
 };
 
 } // connection
