@@ -31,7 +31,9 @@ public:
 	explicit heartbeat_op(
 		std::shared_ptr<connection_type> const& connection
 	) : connection_(connection),
-		info_()
+		info_(),
+		deadline_(),
+		connection_name_(connection->connection_name())
 	{
 		deadline_ = std::make_shared<waitable_timer_type>(connection->get_io_context());
 
@@ -42,7 +44,8 @@ public:
 		info_.set_timestamp(conn->elapsed());
 		info_.set_is_interval_stage(true);
 
-		ES_TRACE("heartbeat_op::heartbeat_op : last-package-no={}, timestamp={} ms, interval-stage={}",
+		ES_TRACE("heartbeat_op::heartbeat_op : connection-name={}, last-package-no={}, timestamp={} ms, interval-stage={}",
+			connection_name_,
 			this->get_package_number(*conn),
 			ES_MILLISECONDS(conn->elapsed()),
 			true
@@ -63,6 +66,13 @@ public:
 		if (!conn->socket().is_open())
 		{
 			ES_DEBUG("heartbeat_op::initiate : socket closed, cancelling heartbeat chain");
+			this->operator()(make_error_code(connection_errors::connection_closed));
+			return;
+		}
+
+		if (conn->connection_name() != connection_name_)
+		{
+			ES_DEBUG("heartbeat_op::initiate : connection {} closed, cancelling heartbeat chain", connection_name_);
 			this->operator()(make_error_code(connection_errors::connection_closed));
 			return;
 		}
@@ -153,6 +163,8 @@ private:
 	std::weak_ptr<connection_type> connection_;
 	detail::connection::heartbeat_info<clock_type> info_;
 	std::shared_ptr<waitable_timer_type> deadline_;
+
+	std::string connection_name_;
 };
 
 } // operations

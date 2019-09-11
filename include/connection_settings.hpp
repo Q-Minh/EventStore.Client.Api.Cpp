@@ -24,28 +24,28 @@ public:
     connection_settings(connection_settings const& other) = default;
     connection_settings& operator=(connection_settings const&) = delete;
 
-    std::uint32_t max_queue_size() const { return max_queue_size_; }
+    //std::uint32_t max_queue_size() const { return max_queue_size_; }
     std::uint32_t max_concurrent_items() const { return max_concurrent_items_; }
-    std::uint32_t max_retries() const { return max_retries_; }
-    std::uint32_t max_reconnections() const { return max_reconnections_; }
+    //std::uint32_t max_retries() const { return max_retries_; }
+    //std::uint32_t max_reconnections() const { return max_reconnections_; }
     bool require_master() const { return require_master_; }
-    std::chrono::milliseconds reconnection_delay() const { return reconnection_delay_; }
-    std::chrono::milliseconds queue_timeout() const { return queue_timeout_; }
+    //std::chrono::milliseconds reconnection_delay() const { return reconnection_delay_; }
+    //std::chrono::milliseconds queue_timeout() const { return queue_timeout_; }
     std::chrono::seconds operation_timeout() const { return operation_timeout_; }
-    std::chrono::seconds operation_timeout_check_period() const { return operation_timeout_check_period_; }
+    //std::chrono::seconds operation_timeout_check_period() const { return operation_timeout_check_period_; }
     std::chrono::milliseconds heartbeat_interval() const { return heartbeat_interval_; }
     std::chrono::milliseconds heartbeat_timeout() const { return heartbeat_timeout_; }
-    std::chrono::milliseconds client_connection_timeout() const { return client_connection_timeout_; }
-    std::uint32_t max_discover_attempts() const { return max_discover_attempts_; }
-    std::uint32_t gossip_external_http_port() const { return gossip_external_http_port_; }
-    std::chrono::seconds gossip_timeout() const { return gossip_timeout_; }
-    node_preference preference() const { return node_preference_; }
+    //std::chrono::milliseconds client_connection_timeout() const { return client_connection_timeout_; }
+    //std::uint32_t max_discover_attempts() const { return max_discover_attempts_; }
+    //std::uint32_t gossip_external_http_port() const { return gossip_external_http_port_; }
+    //std::chrono::seconds gossip_timeout() const { return gossip_timeout_; }
+    //node_preference preference() const { return node_preference_; }
     user::user_credentials const& default_user_credentials() const { return default_user_credentials_; }
     bool use_ssl() const { return use_ssl_; }
     std::string const& target_host() const { return target_host_; }
     bool validate_server() const { return validate_server_; }
     bool fail_on_no_server_response() const { return fail_on_no_server_response_; }
-    std::string const& cluster_dns() const { return cluster_dns_; }
+    //std::string const& cluster_dns() const { return cluster_dns_; }
     std::vector<tcp::gossip_seed> const& gossip_seeds() const { return gossip_seeds_; }
 
 private:

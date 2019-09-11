@@ -175,6 +175,25 @@ void async_append_to_stream(
 	);
 }
 
+template <class ConnectionType, class NewEventSequence, class WriteResultHandler>
+void async_append_to_stream(
+	std::shared_ptr<ConnectionType> const& connection,
+	std::string const& stream,
+	NewEventSequence const& events,
+	WriteResultHandler&& handler,
+	std::int64_t expected_version = (std::int64_t)expected_version::any
+)
+{
+	NewEventSequence copy(events);
+	async_append_to_stream(
+		connection,
+		stream,
+		std::move(copy),
+		std::forward<WriteResultHandler>(handler),
+		expected_version
+	);
+}
+
 }
 
 #endif // ES_APPEND_TO_STREAM_HPP

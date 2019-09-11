@@ -28,7 +28,6 @@
 namespace es {
 namespace connection {
 
-// sorry for all the template parameters...
 template <
 	class WaitableTimer, 
 	class DiscoveryService, 
@@ -76,17 +75,19 @@ public:
 	explicit basic_tcp_connection(
 		boost::asio::io_context& ioc,
 		es::connection_settings const& settings,
-		dynamic_buffer_type&& buffer = dynamic_buffer_type()
+		dynamic_buffer_type&& buffer = dynamic_buffer_type(),
+		std::function<std::string()> conn_name_generator = []() { return std::string("ES-") + es::to_string(es::guid()); }
 	) : socket_(ioc), 
 		settings_(settings),
-		connection_name_(std::string("ES-") + es::to_string(es::guid())),
 		start_(clock_type::now()),
 		message_queue_(),
 		package_no_(0),
 		operations_map_(),
 		subscriptions_map_(),
 		buffer_(std::move(buffer)),
-		is_closed_(true)
+		is_closed_(true),
+		connection_name_generator_(conn_name_generator),
+		connection_name_()
 	{}
 
 	template <class ConnectionResultHandler>
@@ -96,6 +97,9 @@ public:
 			std::is_invocable_v<ConnectionResultHandler, boost::system::error_code, std::optional<connection_result>>,
 			"ConnectionResultHandler requirements not met, must have signature R(boost::system::error_code, std::optional<connection_result>)"
 		);
+
+		// generate new connection name on every connect call
+		connection_name_ = connection_name_generator_();
 
 		auto identification_package_received_handler = 
 			[this, handler = std::move(handler)](boost::system::error_code ec, detail::tcp::tcp_package_view view, guid_type connection_id = guid_type())
@@ -304,7 +308,6 @@ private:
 private:
 	boost::asio::ip::tcp::socket socket_;
 	es::connection_settings settings_;
-	std::string connection_name_;
 	std::chrono::time_point<clock_type> start_;
 	std::deque<detail::tcp::tcp_package<>> message_queue_;
 	unsigned int package_no_;
@@ -313,6 +316,9 @@ private:
 	operations_map_type subscriptions_map_;
 	dynamic_buffer_type buffer_;
 	bool is_closed_;
+
+	std::function<std::string()> connection_name_generator_;
+	std::string connection_name_;
 };
 
 } // connection

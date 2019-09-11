@@ -183,6 +183,7 @@ build_executable(catchup-subscription "examples/catchup_subscription.cpp" "${_so
 build_executable(catchup-all-subscription "examples/catchup_all_subscription.cpp" "${_sources}")
 build_executable(persistent-subscription "examples/persistent_subscription.cpp" "${_sources}")
 build_executable(persistent-subscription-operations "examples/persistent_subscription_operations.cpp" "${_sources}")
+build_executable(reconnection "examples/reconnection.cpp" "${_sources}")
 
 # tests
 add_executable(unit-tests "tests/main.cpp")
