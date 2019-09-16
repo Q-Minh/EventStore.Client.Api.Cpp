@@ -12,6 +12,7 @@ endif()
 find_package(spdlog CONFIG REQUIRED)
 find_package(protobuf CONFIG REQUIRED)
 find_package(Boost REQUIRED)
+find_package(OpenSSL)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
 
@@ -135,6 +136,7 @@ INTERFACE
 )
 get_target_property(_compile_defs ${PROJECT_NAME} INTERFACE_COMPILE_DEFINITIONS)
 message (STATUS "compile defs: ${_compile_defs}")
+
 target_link_libraries(${PROJECT_NAME}
 INTERFACE
     # asio
@@ -145,8 +147,10 @@ INTERFACE
     protobuf::libprotobuf-lite
 	nlohmann_json 
 	nlohmann_json::nlohmann_json
+	$<$<BOOL:${OpenSSL_FOUND}>:OpenSSL::SSL OpenSSL::Crypto>
 )
-# set_target_properties(${PROJECT_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON) only if dll
+get_target_property(_link_libraries ${PROJECT_NAME} INTERFACE_LINK_LIBRARIES)
+message (STATUS "link libraries: ${_link_libraries}")
 
 # examples
 function(build_executable executable entrypoint _sources)
