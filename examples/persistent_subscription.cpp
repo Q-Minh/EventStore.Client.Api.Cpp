@@ -1,10 +1,8 @@
 #include <boost/asio/ip/basic_resolver.hpp>
 #include <boost/asio/ip/address.hpp>
 
-#include "subscription/persistent_subscription.hpp"
-
-#include "connection/basic_tcp_connection.hpp"
-#include "tcp/basic_discovery_service.hpp"
+#include <subscription/persistent_subscription.hpp>
+#include <connection/connection.hpp>
 
 int main(int argc, char** argv)
 {
@@ -44,20 +42,9 @@ int main(int argc, char** argv)
 		.require_master(false)
 		.build();
 
-	// register the discovery service to enable the es tcp connection to discover endpoints to connect to
-	// for now, the discovery service doesn't do anything, since we haven't implemented cluster node discovery
-	using discovery_service_type = es::tcp::services::basic_discovery_service;
-	auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
+	auto& discovery_service = boost::asio::make_service<es::single_node_discovery_service>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
 
-	// parameterize our tcp connection with steady timer, the basic discovery service and our type-erased operation
-	using connection_type =
-		es::connection::basic_tcp_connection<
-		boost::asio::steady_timer,
-		discovery_service_type,
-		es::operation<>
-		>;
-
-	auto tcp_connection = std::make_shared<connection_type>(ioc, connection_settings);
+	auto tcp_connection = std::make_shared<es::single_node_tcp_connection>(ioc, connection_settings);
 
 	// wait for connection before sending operations
 	bool is_connected{ false };
@@ -107,7 +94,7 @@ int main(int argc, char** argv)
 	{
 		ES_INFO("event received, stream={}, number={}, retry-count={}", event.original_stream_id(), event.original_event_number(), retry_count);
 	},
-		[self = subscription](boost::system::error_code ec, es::subscription::persistent_subscription<connection_type> const& subscription)
+		[self = subscription](boost::system::error_code ec, es::subscription::persistent_subscription<es::single_node_tcp_connection> const& subscription)
 	{
 		ES_ERROR("subscription dropped : {}", ec.message());
 	}

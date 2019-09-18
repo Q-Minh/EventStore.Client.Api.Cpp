@@ -78,6 +78,7 @@ INTERFACE
     # connection
     include/connection/authentication_info.hpp
     include/connection/basic_tcp_connection.hpp
+	include/connection/connection.hpp
     include/connection/connection_phase.hpp
     include/connection/connection_state.hpp
     include/connection/constants.hpp
@@ -85,6 +86,7 @@ INTERFACE
     include/connection/identity_info.hpp
     include/connection/node_preference.hpp
     include/connection/reconnection_info.hpp
+	include/connection/secure_tcp_connection.hpp
 
 	# error
 	include/error/error.hpp

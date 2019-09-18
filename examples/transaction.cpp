@@ -1,13 +1,11 @@
 #include <boost/asio/ip/basic_resolver.hpp>
 #include <boost/asio/ip/address.hpp>
 
-#include "event_data.hpp"
-#include "start_transaction.hpp"
-#include "transactional_write.hpp"
-#include "commit_transaction.hpp"
-
-#include "connection/basic_tcp_connection.hpp"
-#include "tcp/basic_discovery_service.hpp"
+#include <event_data.hpp>
+#include <start_transaction.hpp>
+#include <transactional_write.hpp>
+#include <commit_transaction.hpp>
+#include <connection/connection.hpp>
 
 int main(int argc, char** argv)
 {
@@ -47,20 +45,8 @@ int main(int argc, char** argv)
 		.require_master(false)
 		.build();
 
-	// register the discovery service to enable the es tcp connection to discover endpoints to connect to
-	// for now, the discovery service doesn't do anything, since we haven't implemented cluster node discovery
-	using discovery_service_type = es::tcp::services::basic_discovery_service;
-	auto& discovery_service = boost::asio::make_service<discovery_service_type>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
-
-	// parameterize our tcp connection with steady timer, the basic discovery service and our type-erased operation
-	using connection_type =
-		es::connection::basic_tcp_connection<
-		boost::asio::steady_timer,
-		discovery_service_type,
-		es::operation<>
-		>;
-
-	auto tcp_connection = std::make_shared<connection_type>(ioc, connection_settings);
+	auto& discovery_service = boost::asio::make_service<es::single_node_discovery_service>(ioc, endpoint, boost::asio::ip::tcp::endpoint(), false);
+	auto tcp_connection = std::make_shared<es::single_node_tcp_connection>(ioc, connection_settings);
 
 	// wait for connection before sending operations
 	bool is_connected{ false };
@@ -106,7 +92,7 @@ int main(int argc, char** argv)
 	// be called once a server response with respect to this 
 	// operation has been received or has timed out
 	std::string stream = "test-stream";
-	std::optional<es::transaction<connection_type>> transaction;
+	std::optional<es::transaction<es::single_node_tcp_connection>> transaction;
 	notification = false;
 
 	// start the transction, nothing has been written yet, but we will receive a
@@ -115,7 +101,7 @@ int main(int argc, char** argv)
 		tcp_connection,
 		stream,
 		expected_version,
-		[stream = stream, &transaction, &notification](boost::system::error_code ec, std::optional<es::transaction<connection_type>> result)
+		[stream = stream, &transaction, &notification](boost::system::error_code ec, std::optional<es::transaction<es::single_node_tcp_connection>> result)
 	{
 		notification = true;
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef ES_BASIC_TCP_STREAM_HPP
-#define ES_BASIC_TCP_STREAM_HPP
+#ifndef ES_BASIC_TCP_CONNECTION_HPP
+#define ES_BASIC_TCP_CONNECTION_HPP
 
 #include <deque>
 #include <memory>
@@ -29,16 +29,17 @@ namespace es {
 namespace connection {
 
 template <
+	class AsyncWriteStream, // the socket type
 	class WaitableTimer, 
 	class DiscoveryService, 
 	class OperationType, 
 	class Allocator = std::allocator<std::uint8_t>,
 	class DynamicBuffer = buffer::dynamic_buffer<std::uint8_t, Allocator>>
 class basic_tcp_connection
-	: public std::enable_shared_from_this<basic_tcp_connection<WaitableTimer, DiscoveryService, OperationType, Allocator, DynamicBuffer>>
+	: public std::enable_shared_from_this<basic_tcp_connection<AsyncWriteStream, WaitableTimer, DiscoveryService, OperationType, Allocator, DynamicBuffer>>
 {
 public:
-	using self_type = basic_tcp_connection;
+	using self_type = basic_tcp_connection<AsyncWriteStream, WaitableTimer, DiscoveryService, OperationType, Allocator, DynamicBuffer>;
 	using executor_type = typename boost::asio::ip::tcp::socket::executor_type;
 	using clock_type = typename WaitableTimer::clock_type;
 	using operation_type = OperationType;
@@ -47,6 +48,7 @@ public:
 	using allocator_type = Allocator;
 	using dynamic_buffer_type = DynamicBuffer;
 	using waitable_timer_type = WaitableTimer;
+	using socket_type = AsyncWriteStream;
 
 	// make type checks here for template arguments
 	// static_assert(... "...");
@@ -202,6 +204,12 @@ public:
 		this->close([]() {});
 	}
 	
+protected:
+	template <typename Derived>
+	std::shared_ptr<Derived> shared_from_base()
+	{
+		return std::static_pointer_cast<Derived>(this->shared_from_this());
+	}
 private:
 	void on_package_received(boost::system::error_code ec, detail::tcp::tcp_package_view view)
 	{
@@ -306,7 +314,7 @@ private:
 	unsigned int const& package_number() const { return package_no_; }
 
 private:
-	boost::asio::ip::tcp::socket socket_;
+	socket_type socket_;
 	es::connection_settings settings_;
 	std::chrono::time_point<clock_type> start_;
 	std::deque<detail::tcp::tcp_package<>> message_queue_;
@@ -324,4 +332,4 @@ private:
 } // connection
 } // es
 
-#endif // ES_BASIC_TCP_STREAM_HPP
+#endif // ES_BASIC_TCP_CONNECTION_HPP
