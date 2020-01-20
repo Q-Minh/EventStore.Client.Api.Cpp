@@ -28,13 +28,13 @@ You can use [vcpkg](https://github.com/microsoft/vcpkg) for dependency managemen
 
 ```
 # for windows
-./vcpkg install protobuf:x64-windows-static asio:x64-windows-static \ 
+./vcpkg install protobuf:x64-windows-static boost-asio:x64-windows-static \ 
                 spdlog:x64-windows-static boost-uuid:x64-windows-static \ 
 				boost-container-hash:x64-windows-static boost-beast:x64-windows-static \
 				nlohmann-json:x64-windows-static catch2:x64-windows-static
 
 # for linux
-./vcpkg install protobuf asio spdlog boost-uuid boost-container-hash boost-beast nlohmann-json catch2
+./vcpkg install protobuf boost-asio spdlog boost-uuid boost-container-hash boost-beast nlohmann-json catch2
 ```
 
 ### Building
